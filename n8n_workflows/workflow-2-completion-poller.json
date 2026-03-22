@@ -1,0 +1,120 @@
+{
+  "name": "2. Lead Audit — Completion Poller",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 2 }]
+        }
+      },
+      "id": "22222222-0002-0002-0002-000000000001",
+      "name": "Every 2 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.nrankai.com/api/lead-audits/ready",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "22222222-0002-0002-0002-000000000002",
+      "name": "Get Ready Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n auto-splits array responses — each item is already one job.\nconst items = $input.all();\nif (items.length === 0) return [];\nreturn items;"
+      },
+      "id": "22222222-0002-0002-0002-000000000003",
+      "name": "Split Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const job = $input.first().json;\nconst lead = job.lead;\nconst result = job.result;\nconst scores = result.scores;\nconst issues = result.top_issues.slice(0, 3);\nconst opportunity = result.summary.opportunity || '';\n\nconst score_color = scores.geo_score <= 30\n  ? '#ef4444'\n  : scores.geo_score <= 60 ? '#f97316' : '#22c55e';\n\nconst n8n_url = 'http://192.168.0.81:5678';\n\nconst issues_html = issues.map(i =>\n  `<tr>\n    <td style=\"padding:8px 12px;border-bottom:1px solid #f1f5f9;width:80px;\">\n      <span style=\"font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;\">${i.severity}</span>\n    </td>\n    <td style=\"padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:13px;\">${i.title}</td>\n  </tr>`\n).join('');\n\nconst html = `\n<div style=\"font-family:Inter,sans-serif;max-width:600px;background:#f8fafc;padding:24px;border-radius:12px;margin:0 auto;\">\n  <h2 style=\"color:#1e293b;margin:0 0 4px;\">&#x1F50D; Audit complet — ${lead.company_name}</h2>\n  <p style=\"color:#64748b;margin:0 0 20px;font-size:13px;\">${job.website}</p>\n\n  <table style=\"width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;margin-bottom:16px;\">\n    <tr><td style=\"padding:10px 16px;background:#f1f5f9;font-weight:600;color:#475569;width:130px;font-size:13px;\">Companie</td><td style=\"padding:10px 16px;color:#1e293b;font-weight:600;font-size:13px;\">${lead.company_name}</td></tr>\n    <tr><td style=\"padding:10px 16px;font-weight:600;color:#475569;font-size:13px;\">Contact</td><td style=\"padding:10px 16px;color:#334155;font-size:13px;\">${lead.first_name} &lt;${lead.email}&gt;</td></tr>\n    <tr><td style=\"padding:10px 16px;background:#f1f5f9;font-weight:600;color:#475569;font-size:13px;\">GEO Score</td><td style=\"padding:10px 16px;font-weight:700;font-size:20px;color:${score_color};\">${scores.geo_score}/100</td></tr>\n    <tr><td style=\"padding:10px 16px;font-weight:600;color:#475569;font-size:13px;\">Pagini</td><td style=\"padding:10px 16px;color:#334155;font-size:13px;\">${scores.pages_analyzed} analizate</td></tr>\n  </table>\n\n  <div style=\"background:white;padding:12px 16px;border-radius:8px;border-left:4px solid #4ade80;margin-bottom:16px;\">\n    <p style=\"margin:0;color:#334155;font-size:13px;\"><strong>Oportunitate:</strong> ${opportunity}</p>\n  </div>\n\n  <h3 style=\"color:#1e293b;font-size:13px;font-weight:600;margin:0 0 8px;\">Top probleme:</h3>\n  <table style=\"width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;margin-bottom:20px;\">\n    ${issues_html}\n  </table>\n\n  <p style=\"margin-bottom:24px;\">\n    <a href=\"${job.report_url}\" style=\"color:#4f46e5;font-weight:600;font-size:13px;\">&#x2192; Raport complet: ${job.report_url}</a>\n  </p>\n\n  <div>\n    <a href=\"${n8n_url}/webhook/lead-approve?job_id=${job.job_id}&action=send\"\n       style=\"background:#16a34a;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;\">\n      &#x2705; Trimite email rece\n    </a>\n    <a href=\"${n8n_url}/webhook/lead-approve?job_id=${job.job_id}&action=skip\"\n       style=\"background:#94a3b8;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;margin-left:12px;\">\n      &#x274C; Skip\n    </a>\n  </div>\n\n  <p style=\"color:#94a3b8;font-size:11px;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    Lead audit system &mdash; nrankai.com\n  </p>\n</div>`;\n\nreturn [{ json: {\n  to: 'hello@nrankai.com',\n  subject: `\\uD83D\\uDD0D Audit ready \\u2014 ${lead.company_name} (${scores.geo_score}/100)`,\n  html,\n  job_id: job.job_id\n}}];"
+      },
+      "id": "22222222-0002-0002-0002-000000000004",
+      "name": "Build Approval Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "22222222-0002-0002-0002-000000000005",
+      "name": "Send Approval Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "name": "Brevo nrankai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.nrankai.com/api/lead-audits/{{ $('Build Approval Email').item.json.job_id }}/acknowledge",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "22222222-0002-0002-0002-000000000006",
+      "name": "Acknowledge Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Every 2 Minutes": {
+      "main": [[{ "node": "Get Ready Jobs", "type": "main", "index": 0 }]]
+    },
+    "Get Ready Jobs": {
+      "main": [[{ "node": "Split Jobs", "type": "main", "index": 0 }]]
+    },
+    "Split Jobs": {
+      "main": [[{ "node": "Build Approval Email", "type": "main", "index": 0 }]]
+    },
+    "Build Approval Email": {
+      "main": [[{ "node": "Send Approval Email", "type": "main", "index": 0 }]]
+    },
+    "Send Approval Email": {
+      "main": [[{ "node": "Acknowledge Job", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "tags": [{ "name": "lead-audit" }]
+}

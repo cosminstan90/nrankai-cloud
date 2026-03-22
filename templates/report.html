@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEO Analysis — {{ website_display }} | nrankai.com</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gauge-track { fill: none; stroke: #1e293b; stroke-width: 14; }
+    .gauge-fill  { fill: none; stroke-width: 14; stroke-linecap: round;
+                   transition: stroke-dasharray 1.2s ease; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+{% set is_ro = language == "ro" %}
+
+{# ── Translate score label based on language ── #}
+{% if is_ro %}
+  {% if geo_score <= 30 %}{% set score_label = "Slab" %}
+  {% elif geo_score <= 60 %}{% set score_label = "Necesită îmbunătățiri" %}
+  {% elif geo_score <= 80 %}{% set score_label = "Bun" %}
+  {% else %}{% set score_label = "Excelent" %}
+  {% endif %}
+{% endif %}
+
+  <!-- ── Header ── -->
+  <header class="bg-slate-900 border-b border-slate-800">
+    <div class="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+      <span class="text-sm font-semibold tracking-widest text-slate-400 uppercase">nrankai.com</span>
+      <span class="text-xs text-slate-500">
+        {% if is_ro %}Raport analiză GEO{% else %}GEO Analysis Report{% endif %}
+      </span>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-6 py-10 space-y-8">
+
+    <!-- ── Title ── -->
+    <div>
+      <p class="text-slate-400 text-sm mb-1">
+        {% if is_ro %}Website analizat{% else %}Website analysed{% endif %}
+      </p>
+      <h1 class="text-2xl font-bold text-white break-all">{{ website_display }}</h1>
+      <p class="text-slate-500 text-xs mt-1">
+        {% if is_ro %}Generat{% else %}Generated{% endif %} {{ generated_date }} ·
+        {% if is_ro %}Valabil până la{% else %}Valid until{% endif %} {{ expires_date }}
+      </p>
+    </div>
+
+    <!-- ── Score card ── -->
+    <div class="bg-slate-900 rounded-2xl p-8 flex flex-col sm:flex-row items-center gap-8">
+
+      <!-- Gauge -->
+      <div class="relative flex-shrink-0">
+        <svg width="160" height="90" viewBox="0 0 160 90">
+          <!-- track -->
+          <path class="gauge-track"
+            d="M 15 85 A 65 65 0 0 1 145 85"
+            stroke="#1e293b" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <!-- fill — stroke-dasharray = arc_pct * semi-circumference (≈204) -->
+          <path class="gauge-fill"
+            d="M 15 85 A 65 65 0 0 1 145 85"
+            stroke="{{ score_color }}"
+            stroke-dasharray="{{ (arc_pct * 204) | round(1) }} 204"
+            fill="none" stroke-linecap="round"/>
+          <!-- score text -->
+          <text x="80" y="75" text-anchor="middle"
+                font-size="34" font-weight="800" fill="{{ score_color }}"
+                font-family="Inter, sans-serif">{{ geo_score }}</text>
+          <text x="80" y="90" text-anchor="middle"
+                font-size="11" fill="#64748b"
+                font-family="Inter, sans-serif">
+            {% if is_ro %}din 100{% else %}out of 100{% endif %}
+          </text>
+        </svg>
+      </div>
+
+      <!-- Score details -->
+      <div class="flex-1 space-y-3">
+        <div>
+          <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
+                style="background:{{ score_color }}22; color:{{ score_color }}">
+            {{ score_label }}
+          </span>
+        </div>
+        <p class="text-slate-300 text-sm leading-relaxed">
+          {{ summary.one_liner or ("Vizibilitatea acestui website în căutările AI necesită îmbunătățiri semnificative." if is_ro else "This website's AI search visibility needs significant improvement.") }}
+        </p>
+        <!-- Benchmark bar -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-xs text-slate-400">
+            <span>{% if is_ro %}Scorul tău{% else %}Your score{% endif %}</span>
+            <span>{% if is_ro %}Media industriei{% else %}Industry average{% endif %}</span>
+          </div>
+          <div class="relative h-2 bg-slate-800 rounded-full overflow-hidden">
+            <!-- industry avg marker -->
+            <div class="absolute top-0 h-full w-0.5 bg-slate-500 z-10"
+                 style="left:{{ industry_benchmark }}%"></div>
+            <!-- your score -->
+            <div class="h-full rounded-full transition-all duration-1000"
+                 style="width:{{ geo_score }}%; background:{{ score_color }}"></div>
+          </div>
+          <div class="flex justify-between text-xs font-semibold">
+            <span style="color:{{ score_color }}">{{ geo_score }}/100</span>
+            <span class="text-slate-400">{{ industry_benchmark }}/100</span>
+          </div>
+        </div>
+        {% if gap < 0 %}
+        <p class="text-xs text-slate-500">
+          {% if is_ro %}
+            {{ gap | abs }} puncte sub medie · {{ pages_analyzed }} {% if pages_analyzed != 1 %}pagini analizate{% else %}pagină analizată{% endif %}
+          {% else %}
+            {{ gap | abs }} points below average · {{ pages_analyzed }} page{% if pages_analyzed != 1 %}s{% endif %} analysed
+          {% endif %}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Issues ── -->
+    {% if top_issues %}
+    <div>
+      <h2 class="text-lg font-bold text-white mb-4">
+        {% if is_ro %}Probleme găsite{% else %}Issues Found{% endif %}
+        <span class="ml-2 text-sm font-normal text-slate-400">
+          ({{ top_issues | length }} {% if is_ro %}afișate{% else %}shown{% endif %})
+        </span>
+      </h2>
+      <div class="space-y-3">
+        {% for issue in top_issues %}
+        {% set sev = issue.severity | lower %}
+        {% if sev == "critical" %}
+          {% set badge_bg = "bg-red-950" %}
+          {% set badge_text = "text-red-400" %}
+          {% set badge_border = "border-red-900" %}
+          {% set label = "Critic" if is_ro else "Critical" %}
+        {% elif sev == "major" or sev == "high" %}
+          {% set badge_bg = "bg-amber-950" %}
+          {% set badge_text = "text-amber-400" %}
+          {% set badge_border = "border-amber-900" %}
+          {% set label = "Major" %}
+        {% else %}
+          {% set badge_bg = "bg-slate-800" %}
+          {% set badge_text = "text-slate-400" %}
+          {% set badge_border = "border-slate-700" %}
+          {% set label = "Mediu" if is_ro else "Medium" %}
+        {% endif %}
+        <div class="bg-slate-900 border {{ badge_border }} rounded-xl p-5">
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 px-2 py-0.5 rounded text-xs font-semibold {{ badge_bg }} {{ badge_text }} uppercase tracking-wide flex-shrink-0">
+              {{ label }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-white text-sm">{{ issue.title }}</p>
+              <p class="text-slate-400 text-sm mt-1">{{ issue.description }}</p>
+              <p class="text-slate-500 text-xs mt-2 italic">Impact: {{ issue.impact }}</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Quick Wins ── -->
+    {% if quick_wins %}
+    <div class="bg-slate-900 rounded-2xl p-6">
+      <h2 class="text-lg font-bold text-white mb-4">
+        {% if is_ro %}Îmbunătățiri rapide{% else %}Quick Wins{% endif %}
+      </h2>
+      <p class="text-slate-400 text-sm mb-4">
+        {% if is_ro %}
+          Acestea pot fi implementate rapid și vor îmbunătăți semnificativ scorul:
+        {% else %}
+          These can be implemented quickly and will meaningfully improve your score:
+        {% endif %}
+      </p>
+      <ul class="space-y-2">
+        {% for win in quick_wins %}
+        <li class="flex items-start gap-3 text-sm text-slate-300">
+          <svg class="mt-0.5 flex-shrink-0 text-emerald-500" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ win }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- ── Executive summary ── -->
+    {% if summary.executive %}
+    <div class="bg-slate-900 rounded-2xl p-6">
+      <h2 class="text-lg font-bold text-white mb-3">
+        {% if is_ro %}Sumar analiză{% else %}Analysis Summary{% endif %}
+      </h2>
+      <p class="text-slate-300 text-sm leading-relaxed">{{ summary.executive }}</p>
+      {% if summary.opportunity %}
+      <p class="mt-3 text-emerald-400 text-sm font-medium">{{ summary.opportunity }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── CTA ── -->
+    <div class="bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-800 rounded-2xl p-8 text-center space-y-4">
+      <h2 class="text-xl font-bold text-white">
+        {% if is_ro %}Vrei să rezolvăm aceste probleme?{% else %}Want these issues fixed?{% endif %}
+      </h2>
+      <p class="text-slate-300 text-sm max-w-sm mx-auto">
+        {% if is_ro %}
+          Rezolvăm probleme GEO și SEO pentru afaceri exact ca a ta.
+          Cele mai critice probleme sunt rezolvate în primele două săptămâni.
+        {% else %}
+          We fix GEO and SEO issues for businesses exactly like yours.
+          Most critical issues are resolved within the first two weeks.
+        {% endif %}
+      </p>
+      <a href="mailto:hello@nrankai.com?subject=Re:%20GEO%20Report%20for%20{{ website_display }}"
+         class="inline-block px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-sm">
+        {% if is_ro %}Programează o consultație gratuită →{% else %}Book a Free Strategy Call →{% endif %}
+      </a>
+      <p class="text-slate-500 text-xs">
+        {% if is_ro %}Fără angajament. 20 de minute. Răspunsuri reale.{% else %}No commitment. 20 minutes. Real answers.{% endif %}
+      </p>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer class="border-t border-slate-800 mt-12">
+    <div class="max-w-3xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
+      <span>© {{ generated_date[-4:] }} nrankai.com</span>
+      <span>
+        {% if is_ro %}
+          Acest raport a fost generat automat și este privat pentru destinatar.
+        {% else %}
+          This report was generated automatically and is private to the recipient.
+        {% endif %}
+      </span>
+    </div>
+  </footer>
+
+</body>
+</html>

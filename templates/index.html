@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free GEO Audit — Is your website visible to AI search engines? | nrankai.com</title>
+  <meta name="description" content="Find out if ChatGPT, Perplexity, and Google AI Overviews are recommending your competitors instead of you. Free GEO visibility audit in minutes." />
+  <meta name="robots" content="index, follow" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .glow {
+      box-shadow: 0 0 40px rgba(129, 140, 248, 0.15);
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      70% { transform: scale(1); opacity: 0; }
+      100% { transform: scale(0.95); opacity: 0; }
+    }
+    .spinner {
+      border: 3px solid rgba(129,140,248,0.2);
+      border-top-color: #818cf8;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- ── Nav ── -->
+  <nav class="border-b border-slate-800/50">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <span class="font-bold text-white tracking-tight">nrankai<span class="text-indigo-400">.com</span></span>
+      <a href="mailto:hello@nrankai.com"
+         class="text-sm text-slate-400 hover:text-white transition-colors">
+        hello@nrankai.com
+      </a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs font-medium mb-8">
+      <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+      Free GEO Visibility Audit
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
+      Is your website<br/>
+      <span class="gradient-text">invisible to AI search?</span>
+    </h1>
+
+    <p class="text-lg text-slate-400 max-w-2xl mx-auto mb-4 leading-relaxed">
+      ChatGPT, Perplexity, and Google AI Overviews are answering your customers' questions right now.
+      The question is — are they recommending <strong class="text-slate-200">you</strong> or your competitors?
+    </p>
+    <p class="text-slate-500 text-sm mb-12">
+      Get a free GEO score for your website in minutes. No account needed.
+    </p>
+
+    <!-- ── Form card ── -->
+    <div class="max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-8 glow" id="audit-form-card">
+
+      <!-- Form state -->
+      <form id="audit-form" class="space-y-4" novalidate>
+        <div class="text-left">
+          <label class="block text-sm font-medium text-slate-300 mb-1.5" for="website">
+            Your website URL
+          </label>
+          <input
+            id="website"
+            type="url"
+            placeholder="https://yourwebsite.com"
+            required
+            class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+                   focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500
+                   transition-colors text-sm"
+          />
+        </div>
+
+        <div class="text-left">
+          <label class="block text-sm font-medium text-slate-300 mb-1.5" for="email">
+            Your email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            required
+            class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+                   focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500
+                   transition-colors text-sm"
+          />
+        </div>
+
+        <div class="text-left">
+          <label class="block text-sm font-medium text-slate-300 mb-1.5" for="first_name">
+            First name <span class="text-slate-600 font-normal">(optional)</span>
+          </label>
+          <input
+            id="first_name"
+            type="text"
+            placeholder="Alex"
+            class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+                   focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500
+                   transition-colors text-sm"
+          />
+        </div>
+
+        <div id="form-error" class="hidden text-red-400 text-sm text-left px-1"></div>
+
+        <button
+          type="submit"
+          id="submit-btn"
+          class="w-full py-3.5 px-6 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700
+                 text-white font-semibold rounded-xl transition-colors text-sm
+                 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          Run my free GEO audit →
+        </button>
+
+        <p class="text-slate-600 text-xs">
+          We'll analyse your homepage and send findings to your email. No spam, ever.
+        </p>
+      </form>
+
+      <!-- Loading state (hidden by default) -->
+      <div id="loading-state" class="hidden text-center py-4 space-y-4">
+        <div class="spinner mx-auto"></div>
+        <p class="text-white font-semibold">Submitting your audit…</p>
+        <p class="text-slate-400 text-sm">This takes just a second.</p>
+      </div>
+
+      <!-- Success state (hidden by default) -->
+      <div id="success-state" class="hidden text-center space-y-5">
+        <div class="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-800 flex items-center justify-center mx-auto">
+          <svg class="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-bold text-lg">Your audit is running!</p>
+          <p class="text-slate-400 text-sm mt-1">Usually takes 1–3 minutes. The page below will update automatically.</p>
+        </div>
+        <a id="report-link" href="#"
+           class="inline-block w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500
+                  text-white font-semibold rounded-xl transition-colors text-sm">
+          View my report →
+        </a>
+        <p class="text-slate-600 text-xs">
+          Bookmark the link above — we'll also email you when it's ready.
+        </p>
+      </div>
+
+      <!-- Error state (hidden by default) -->
+      <div id="error-state" class="hidden text-center space-y-4">
+        <p class="text-red-400 font-semibold">Something went wrong.</p>
+        <p class="text-slate-400 text-sm" id="error-detail">Please check your URL and try again.</p>
+        <button onclick="resetForm()"
+                class="text-indigo-400 hover:text-indigo-300 text-sm underline underline-offset-2">
+          Try again
+        </button>
+      </div>
+    </div>
+
+    <p class="text-slate-600 text-xs mt-6">
+      Your data is used solely to generate your report and contact you about findings.
+    </p>
+  </section>
+
+  <!-- ── What is GEO ── -->
+  <section class="border-t border-slate-800/50">
+    <div class="max-w-5xl mx-auto px-6 py-20">
+      <div class="text-center mb-14">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-4">
+          SEO got you on Google.<br/>
+          <span class="text-slate-400 font-normal">GEO gets you into AI answers.</span>
+        </h2>
+        <p class="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
+          When someone asks ChatGPT "best accountant in London" or Perplexity "top CRM for startups",
+          the AI pulls from websites it can understand and trust. Most sites aren't structured for this yet.
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="text-2xl mb-3">🤖</div>
+          <h3 class="font-semibold text-white mb-2">AI Search is here</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            ChatGPT, Perplexity, and Google AI Overviews collectively handle billions of queries per month —
+            and they bypass traditional search results.
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="text-2xl mb-3">📉</div>
+          <h3 class="font-semibold text-white mb-2">Most sites score poorly</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            The average GEO score across the sites we audit is 61/100.
+            Businesses with scores below 40 are essentially invisible to AI engines.
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="text-2xl mb-3">🚀</div>
+          <h3 class="font-semibold text-white mb-2">Early mover advantage</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            GEO is where SEO was in 2005. The businesses that optimise now will own their category
+            in AI search before competitors even realise it exists.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── What you get ── -->
+  <section class="border-t border-slate-800/50">
+    <div class="max-w-5xl mx-auto px-6 py-20">
+      <div class="grid sm:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-white mb-6">
+            What your free report includes
+          </h2>
+          <ul class="space-y-4">
+            {%- for item in [
+              ("GEO Visibility Score", "A single 0–100 score showing how well AI engines can find and recommend your site."),
+              ("Industry Benchmark", "See how you compare to the average in your sector."),
+              ("Top Issues Found", "The specific things holding your score down, ranked by impact."),
+              ("Quick Wins", "Changes you can make this week that will meaningfully move your score."),
+              ("Executive Summary", "A plain-English explanation of where you stand and what's at stake.")
+            ] %}
+            <li class="flex gap-3">
+              <svg class="mt-0.5 flex-shrink-0 text-indigo-400" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              <div>
+                <p class="font-medium text-white text-sm">{{ item[0] }}</p>
+                <p class="text-slate-400 text-sm">{{ item[1] }}</p>
+              </div>
+            </li>
+            {%- endfor %}
+          </ul>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <!-- Mini score preview -->
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400 text-sm">GEO Score</span>
+            <span class="text-2xl font-black text-orange-400">38<span class="text-slate-500 text-base font-normal">/100</span></span>
+          </div>
+          <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full rounded-full bg-orange-400" style="width:38%"></div>
+          </div>
+          <div class="text-xs text-slate-500 flex justify-between">
+            <span>Your score</span>
+            <span>Industry avg: 61</span>
+          </div>
+          <div class="border-t border-slate-800 pt-4 space-y-2">
+            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Top issues</p>
+            <div class="flex items-start gap-2 text-sm">
+              <span class="px-1.5 py-0.5 rounded text-xs font-bold bg-red-950 text-red-400 flex-shrink-0">Critical</span>
+              <span class="text-slate-400">No structured data markup found</span>
+            </div>
+            <div class="flex items-start gap-2 text-sm">
+              <span class="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-950 text-amber-400 flex-shrink-0">Major</span>
+              <span class="text-slate-400">Content too thin for AI citation</span>
+            </div>
+            <div class="flex items-start gap-2 text-sm">
+              <span class="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-950 text-amber-400 flex-shrink-0">Major</span>
+              <span class="text-slate-400">No clear author or E-E-A-T signals</span>
+            </div>
+          </div>
+          <p class="text-xs text-slate-600 italic">Example report — your results will vary.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA repeat ── -->
+  <section class="border-t border-slate-800/50">
+    <div class="max-w-5xl mx-auto px-6 py-20 text-center">
+      <h2 class="text-2xl sm:text-3xl font-bold text-white mb-4">
+        Find out where you stand — free
+      </h2>
+      <p class="text-slate-400 mb-8 text-sm">No account. No credit card. Results in minutes.</p>
+      <a href="#audit-form-card"
+         onclick="document.getElementById('website').focus()"
+         class="inline-block px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-sm">
+        Run my free GEO audit →
+      </a>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="border-t border-slate-800">
+    <div class="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
+      <span>© 2026 nrankai.com</span>
+      <span>
+        Questions? <a href="mailto:hello@nrankai.com" class="text-slate-500 hover:text-slate-400">hello@nrankai.com</a>
+      </span>
+    </div>
+  </footer>
+
+  <!-- ── Form logic ── -->
+  <script>
+    const API_URL = '/api/lead-audits/submit';
+
+    const form        = document.getElementById('audit-form');
+    const loadingEl   = document.getElementById('loading-state');
+    const successEl   = document.getElementById('success-state');
+    const errorEl     = document.getElementById('error-state');
+    const errorDetail = document.getElementById('error-detail');
+    const reportLink  = document.getElementById('report-link');
+    const formError   = document.getElementById('form-error');
+    const submitBtn   = document.getElementById('submit-btn');
+
+    function showOnly(el) {
+      [form, loadingEl, successEl, errorEl].forEach(e => e.classList.add('hidden'));
+      el.classList.remove('hidden');
+    }
+
+    function resetForm() {
+      showOnly(form);
+      formError.classList.add('hidden');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Run my free GEO audit →';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      const website    = document.getElementById('website').value.trim();
+      const email      = document.getElementById('email').value.trim();
+      const first_name = document.getElementById('first_name').value.trim();
+
+      // Basic client-side validation
+      if (!website) {
+        formError.textContent = 'Please enter your website URL.';
+        formError.classList.remove('hidden');
+        return;
+      }
+      if (!email) {
+        formError.textContent = 'Please enter your email address.';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      // Normalise URL
+      let url = website;
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+      submitBtn.disabled = true;
+      showOnly(loadingEl);
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ website: url, email, first_name: first_name || 'there' }),
+        });
+
+        if (res.status === 429) {
+          errorDetail.textContent = "You've submitted too many audits recently. Please wait an hour and try again.";
+          showOnly(errorEl);
+          return;
+        }
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          errorDetail.textContent = data.detail || 'Something went wrong. Please try again.';
+          showOnly(errorEl);
+          return;
+        }
+
+        const data = await res.json();
+        reportLink.href = data.report_url;
+        showOnly(successEl);
+
+      } catch (err) {
+        errorDetail.textContent = 'Could not reach the server. Please check your connection and try again.';
+        showOnly(errorEl);
+      }
+    });
+  </script>
+
+</body>
+</html>

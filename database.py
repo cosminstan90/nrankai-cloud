@@ -1,0 +1,93 @@
+import uuid
+import json
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlalchemy import String, Text, Integer, DateTime, Index
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+DATABASE_URL = "sqlite+aiosqlite:///./lead_audits.db"
+
+engine = create_async_engine(DATABASE_URL, echo=False)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class LeadAuditJob(Base):
+    __tablename__ = "lead_audit_jobs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    website: Mapped[str] = mapped_column(String(512))
+
+    # Stored as JSON text
+    lead_json: Mapped[str] = mapped_column(Text)
+    options_json: Mapped[str] = mapped_column(Text)
+
+    # Report link
+    public_token: Mapped[str] = mapped_column(String(20), unique=True)
+
+    # n8n callback
+    n8n_webhook: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    picked_up_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Worker data
+    result_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    local_audit_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Set to 1 after n8n has been notified (prevents duplicate approval emails)
+    n8n_notified: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+    __table_args__ = (
+        Index("ix_lead_audit_jobs_status", "status"),
+        Index("ix_lead_audit_jobs_public_token", "public_token"),
+        Index("ix_lead_audit_jobs_n8n_notified", "n8n_notified"),
+    )
+
+    # ── helpers ──────────────────────────────────────────────────────────
+
+    @property
+    def lead(self) -> dict:
+        return json.loads(self.lead_json)
+
+    @property
+    def options(self) -> dict:
+        return json.loads(self.options_json)
+
+    @property
+    def result(self) -> Optional[dict]:
+        return json.loads(self.result_json) if self.result_json else None
+
+    @property
+    def error(self) -> Optional[dict]:
+        return json.loads(self.error_json) if self.error_json else None
+
+    def report_url(self, base_url: str) -> str:
+        return f"{base_url}/reports/{self.public_token}"
+
+    def status_url(self, base_url: str) -> str:
+        return f"{base_url}/api/lead-audits/{self.id}/status"
+
+
+async def get_session():
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

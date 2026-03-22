@@ -1,0 +1,561 @@
+{
+  "name": "3. Lead Audit — Approval & Cold Email",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d9bf1daa-a040-4b09-9752-493ec655de2e",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "website",
+              "value": "https://bestetic.ro",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "email",
+              "value": "hello@nrankai.com",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "first_name",
+              "value": "Test",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "company_name",
+              "value": "Bestetic",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "language",
+              "value": "ro",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0bd792ad-29ba-4456-a6d4-777ddc402ab9",
+      "name": "Lead Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        304,
+        -176
+      ],
+      "notes": "Fill in lead details here. When connected to Explorium, replace this node with the Explorium data."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.nrankai.com/api/lead-audits",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"website\": \"{{ $json.website }}\",\n  \"lead\": {\n    \"email\": \"{{ $json.email }}\",\n    \"first_name\": \"{{ $json.first_name }}\",\n    \"company_name\": \"{{ $json.company_name }}\",\n    \"language\": \"{{ $json.language }}\"\n  },\n  \"options\": { \"audit_type\": \"GEO_AUDIT\" }\n}",
+        "options": {}
+      },
+      "id": "f3cd111c-c4c4-4d5c-afa4-0d5b06d0e13e",
+      "name": "Create Audit Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "o1",
+              "name": "job_id",
+              "value": "={{ $json.job_id }}",
+              "type": "string"
+            },
+            {
+              "id": "o2",
+              "name": "report_url",
+              "value": "={{ $json.report_url }}",
+              "type": "string"
+            },
+            {
+              "id": "o3",
+              "name": "status_url",
+              "value": "={{ $json.status_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6da0dc3b-b159-4243-af60-570ca79e0a17",
+      "name": "Job Created",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        752,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "f0f64960-0f83-4f2b-b461-0a555b6eabb7",
+      "name": "Every 2 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -112,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.nrankai.com/api/lead-audits/ready",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31519e30-0aaa-4e4d-89a3-f00e3e6667e6",
+      "name": "Get Ready Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        112,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n auto-splits array responses — each item is already one job.\nconst items = $input.all();\nif (items.length === 0) return [];\nreturn items;"
+      },
+      "id": "04f52a28-2aed-485f-a939-b23e2105ba7d",
+      "name": "Split Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const job = $input.first().json;\nconst lead = job.lead;\nconst result = job.result;\nconst scores = result.scores;\nconst issues = result.top_issues.slice(0, 3);\nconst opportunity = result.summary.opportunity || '';\n\nconst score_color = scores.geo_score <= 30\n  ? '#ef4444'\n  : scores.geo_score <= 60 ? '#f97316' : '#22c55e';\n\nconst n8n_url = 'http://192.168.0.81:5678';\n\nconst issues_html = issues.map(i =>\n  `<tr>\n    <td style=\"padding:8px 12px;border-bottom:1px solid #f1f5f9;width:80px;\">\n      <span style=\"font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;\">${i.severity}</span>\n    </td>\n    <td style=\"padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#334155;font-size:13px;\">${i.title}</td>\n  </tr>`\n).join('');\n\nconst html = `\n<div style=\"font-family:Inter,sans-serif;max-width:600px;background:#f8fafc;padding:24px;border-radius:12px;margin:0 auto;\">\n  <h2 style=\"color:#1e293b;margin:0 0 4px;\">&#x1F50D; Audit complet — ${lead.company_name}</h2>\n  <p style=\"color:#64748b;margin:0 0 20px;font-size:13px;\">${job.website}</p>\n\n  <table style=\"width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;margin-bottom:16px;\">\n    <tr><td style=\"padding:10px 16px;background:#f1f5f9;font-weight:600;color:#475569;width:130px;font-size:13px;\">Companie</td><td style=\"padding:10px 16px;color:#1e293b;font-weight:600;font-size:13px;\">${lead.company_name}</td></tr>\n    <tr><td style=\"padding:10px 16px;font-weight:600;color:#475569;font-size:13px;\">Contact</td><td style=\"padding:10px 16px;color:#334155;font-size:13px;\">${lead.first_name} &lt;${lead.email}&gt;</td></tr>\n    <tr><td style=\"padding:10px 16px;background:#f1f5f9;font-weight:600;color:#475569;font-size:13px;\">GEO Score</td><td style=\"padding:10px 16px;font-weight:700;font-size:20px;color:${score_color};\">${scores.geo_score}/100</td></tr>\n    <tr><td style=\"padding:10px 16px;font-weight:600;color:#475569;font-size:13px;\">Pagini</td><td style=\"padding:10px 16px;color:#334155;font-size:13px;\">${scores.pages_analyzed} analizate</td></tr>\n  </table>\n\n  <div style=\"background:white;padding:12px 16px;border-radius:8px;border-left:4px solid #4ade80;margin-bottom:16px;\">\n    <p style=\"margin:0;color:#334155;font-size:13px;\"><strong>Oportunitate:</strong> ${opportunity}</p>\n  </div>\n\n  <h3 style=\"color:#1e293b;font-size:13px;font-weight:600;margin:0 0 8px;\">Top probleme:</h3>\n  <table style=\"width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;margin-bottom:20px;\">\n    ${issues_html}\n  </table>\n\n  <p style=\"margin-bottom:24px;\">\n    <a href=\"${job.report_url}\" style=\"color:#4f46e5;font-weight:600;font-size:13px;\">&#x2192; Raport complet: ${job.report_url}</a>\n  </p>\n\n  <div>\n    <a href=\"${n8n_url}/webhook/lead-approve?job_id=${job.job_id}&action=send\"\n       style=\"background:#16a34a;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;\">\n      &#x2705; Trimite email rece\n    </a>\n    <a href=\"${n8n_url}/webhook/lead-approve?job_id=${job.job_id}&action=skip\"\n       style=\"background:#94a3b8;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;margin-left:12px;\">\n      &#x274C; Skip\n    </a>\n  </div>\n\n  <p style=\"color:#94a3b8;font-size:11px;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    Lead audit system &mdash; nrankai.com\n  </p>\n</div>`;\n\nreturn [{ json: {\n  to: 'hello@nrankai.com',\n  subject: `\\uD83D\\uDD0D Audit ready \\u2014 ${lead.company_name} (${scores.geo_score}/100)`,\n  html,\n  job_id: job.job_id\n}}];"
+      },
+      "id": "3c44bb13-c907-4028-b12b-c7329b9969c5",
+      "name": "Build Approval Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "faa822dd-f151-49d4-b76a-a249e405b53f",
+      "name": "Send Approval Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        784,
+        128
+      ],
+      "webhookId": "875a6907-dd1c-4885-a025-8ab182592d00",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "name": "Brevo nrankai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.nrankai.com/api/lead-audits/{{ $('Build Approval Email').item.json.job_id }}/acknowledge",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "481b4274-f97e-4dba-9f11-96a3d313b788",
+      "name": "Acknowledge Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        992,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "path": "lead-approve",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9f470137-e028-47e0-9c55-f6d858070f35",
+      "name": "Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        448,
+        560
+      ],
+      "webhookId": "lead-approve",
+      "notes": "URL: http://192.168.0.81:5678/webhook/lead-approve?job_id=xxx&action=send|skip"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.nrankai.com/api/lead-audits/{{ $json.query.job_id }}/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "92378bfc-8fa2-4770-ad76-f540d14e48b9",
+      "name": "Get Job Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-action",
+              "leftValue": "={{ $('Approval Webhook').item.json.query.action }}",
+              "rightValue": "send",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "86feeaeb-3d7b-4170-867b-e26ef624b6c3",
+      "name": "Send or Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        896,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the cold email (language-aware: EN or RO)\nconst job = $input.first().json;\nconst lead = job.lead;\nconst result = job.result;\nconst lang = lead.language || 'en';\nconst isRo = lang === 'ro';\nconst scores = result.scores;\nconst issues = result.top_issues.slice(0, 3);\nconst opportunity = result.summary.opportunity || '';\nconst subject = isRo\n  ? result.email_ready.subject.ro\n  : result.email_ready.subject.en;\n\nconst issues_html = issues.map(i =>\n  `<li style=\"margin-bottom:6px;color:#334155;\">${i.title}</li>`\n).join('');\n\nlet html;\nif (isRo) {\n  html = `\n<div style=\"font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:0;color:#1e293b;\">\n  <p>Bun\\u0103 ziua <strong>${lead.first_name}</strong>,</p>\n\n  <p>Am analizat website-ul <strong>${lead.company_name}</strong> din perspectiva vizibilit\\u0103\\u021bii \\u00een motoarele de c\\u0103utare AI (ChatGPT, Google AI Overviews, Perplexity) \\u015fi am creat un raport gratuit:</p>\n\n  <p style=\"margin:20px 0;\">\n    <a href=\"${job.report_url}\" style=\"background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;\">\n      &#x2192; Vezi raportul complet\n    </a>\n  </p>\n\n  <p><strong>Scor GEO curent: ${scores.geo_score}/100</strong> (media industriei: 61/100)</p>\n  <p style=\"color:#16a34a;\"><em>${opportunity}</em></p>\n\n  <p><strong>Principalele probleme identificate:</strong></p>\n  <ul style=\"padding-left:20px;\">${issues_html}</ul>\n\n  <p>Dac\\u0103 e\\u015fti interesat de o consulta\\u021bie gratuit\\u0103 de 20 de minute \\u00een care discut\\u0103m cum putem rezolva aceste probleme, r\\u0103spunde la acest email.</p>\n\n  <br>\n  <p>Cu respect,<br>\n  <strong>Cosmin Stan</strong><br>\n  <a href=\"https://nrankai.com\" style=\"color:#4f46e5;\">nrankai.com</a> | hello@nrankai.com</p>\n\n  <p style=\"color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:24px;\">\n    Ai primit acest email deoarece website-ul t\\u0103u a fost inclus \\u00eentr-o analiz\\u0103 gratuit\\u0103 de vizibilitate AI.\n    Dac\\u0103 nu e\\u015fti interesat, ignor\\u0103 acest email.\n  </p>\n</div>`;\n} else {\n  html = `\n<div style=\"font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:0;color:#1e293b;\">\n  <p>Hi <strong>${lead.first_name}</strong>,</p>\n\n  <p>I ran a free GEO visibility audit on <strong>${lead.company_name}</strong>'s website &#x2014; checking how well it appears in AI search engines (ChatGPT, Google AI Overviews, Perplexity):</p>\n\n  <p style=\"margin:20px 0;\">\n    <a href=\"${job.report_url}\" style=\"background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;\">\n      &#x2192; View Your Free Report\n    </a>\n  </p>\n\n  <p><strong>Current GEO Score: ${scores.geo_score}/100</strong> (industry average: 61/100)</p>\n  <p style=\"color:#16a34a;\"><em>${opportunity}</em></p>\n\n  <p><strong>Top issues found:</strong></p>\n  <ul style=\"padding-left:20px;\">${issues_html}</ul>\n\n  <p>If you'd like a free 20-minute call to walk through these findings and discuss next steps, just reply to this email.</p>\n\n  <br>\n  <p>Best,<br>\n  <strong>Cosmin Stan</strong><br>\n  <a href=\"https://nrankai.com\" style=\"color:#4f46e5;\">nrankai.com</a> | hello@nrankai.com</p>\n\n  <p style=\"color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:24px;\">\n    You received this because your website was included in a free AI visibility analysis.\n    Not interested? Simply ignore this email.\n  </p>\n</div>`;\n}\n\nreturn [{ json: {\n  to: lead.email,\n  subject,\n  html,\n  first_name: lead.first_name,\n  company: lead.company_name,\n  job_id: job.job_id\n}}];"
+      },
+      "id": "b65b857a-77e1-4eaf-a5fc-82b0fef10917",
+      "name": "Build Cold Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "592df1cb-1157-4077-be05-b69937b8a05f",
+      "name": "Send Cold Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        448
+      ],
+      "webhookId": "66d712ce-545c-4a65-8283-4f3cb934bd4c",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "name": "Brevo nrankai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=Email sent to {{ $('Build Cold Email').item.json.to }} ✓",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "cfbdde73-dce0-4de5-aa99-5b6949b8cd72",
+      "name": "Respond: Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Skipped ✓",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "3098c79b-0970-41a1-ae91-01402e7b5369",
+      "name": "Respond: Skipped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        672
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Create Audit Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Audit Job": {
+      "main": [
+        [
+          {
+            "node": "Job Created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 2 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Ready Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ready Jobs": {
+      "main": [
+        [
+          {
+            "node": "Split Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Jobs": {
+      "main": [
+        [
+          {
+            "node": "Build Approval Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Approval Email": {
+      "main": [
+        [
+          {
+            "node": "Send Approval Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval Email": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Job Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Job Details": {
+      "main": [
+        [
+          {
+            "node": "Send or Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send or Skip?": {
+      "main": [
+        [
+          {
+            "node": "Build Cold Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Cold Email": {
+      "main": [
+        [
+          {
+            "node": "Send Cold Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Cold Email": {
+      "main": [
+        [
+          {
+            "node": "Respond: Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c6a0ac34-06d9-46cf-9792-fee37b1ea41b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bff5ec6575d91e9328abfbbc0ff407c1479dfc8c0c19b97d8bfedd7bf1e6efc6"
+  },
+  "id": "eV5HCnKVtIvFbNQm",
+  "tags": [
+    {
+      "name": "lead-audit",
+      "id": "1pMfgodZmjxym4ib",
+      "updatedAt": "2026-03-13T12:48:36.431Z",
+      "createdAt": "2026-03-13T12:48:36.431Z"
+    }
+  ]
+}

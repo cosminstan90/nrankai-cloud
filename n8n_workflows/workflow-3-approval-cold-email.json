@@ -1,0 +1,149 @@
+{
+  "name": "3. Lead Audit — Approval & Cold Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "lead-approve",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "33333333-0003-0003-0003-000000000001",
+      "name": "Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "lead-approve",
+      "notes": "URL: http://192.168.0.81:5678/webhook/lead-approve?job_id=xxx&action=send|skip"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.nrankai.com/api/lead-audits/{{ $json.query.job_id }}/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "33333333-0003-0003-0003-000000000002",
+      "name": "Get Job Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-action",
+              "leftValue": "={{ $('Approval Webhook').item.json.query.action }}",
+              "rightValue": "send",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "33333333-0003-0003-0003-000000000003",
+      "name": "Send or Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the cold email (language-aware: EN or RO)\nconst job = $input.first().json;\nconst lead = job.lead;\nconst result = job.result;\nconst lang = lead.language || 'en';\nconst isRo = lang === 'ro';\nconst scores = result.scores;\nconst issues = result.top_issues.slice(0, 3);\nconst opportunity = result.summary.opportunity || '';\nconst subject = isRo\n  ? result.email_ready.subject.ro\n  : result.email_ready.subject.en;\n\nconst issues_html = issues.map(i =>\n  `<li style=\"margin-bottom:6px;color:#334155;\">${i.title}</li>`\n).join('');\n\nlet html;\nif (isRo) {\n  html = `\n<div style=\"font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:0;color:#1e293b;\">\n  <p>Bun\\u0103 ziua <strong>${lead.first_name}</strong>,</p>\n\n  <p>Am analizat website-ul <strong>${lead.company_name}</strong> din perspectiva vizibilit\\u0103\\u021bii \\u00een motoarele de c\\u0103utare AI (ChatGPT, Google AI Overviews, Perplexity) \\u015fi am creat un raport gratuit:</p>\n\n  <p style=\"margin:20px 0;\">\n    <a href=\"${job.report_url}\" style=\"background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;\">\n      &#x2192; Vezi raportul complet\n    </a>\n  </p>\n\n  <p><strong>Scor GEO curent: ${scores.geo_score}/100</strong> (media industriei: 61/100)</p>\n  <p style=\"color:#16a34a;\"><em>${opportunity}</em></p>\n\n  <p><strong>Principalele probleme identificate:</strong></p>\n  <ul style=\"padding-left:20px;\">${issues_html}</ul>\n\n  <p>Dac\\u0103 e\\u015fti interesat de o consulta\\u021bie gratuit\\u0103 de 20 de minute \\u00een care discut\\u0103m cum putem rezolva aceste probleme, r\\u0103spunde la acest email.</p>\n\n  <br>\n  <p>Cu respect,<br>\n  <strong>Cosmin Stan</strong><br>\n  <a href=\"https://nrankai.com\" style=\"color:#4f46e5;\">nrankai.com</a> | hello@nrankai.com</p>\n\n  <p style=\"color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:24px;\">\n    Ai primit acest email deoarece website-ul t\\u0103u a fost inclus \\u00eentr-o analiz\\u0103 gratuit\\u0103 de vizibilitate AI.\n    Dac\\u0103 nu e\\u015fti interesat, ignor\\u0103 acest email.\n  </p>\n</div>`;\n} else {\n  html = `\n<div style=\"font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:0;color:#1e293b;\">\n  <p>Hi <strong>${lead.first_name}</strong>,</p>\n\n  <p>I ran a free GEO visibility audit on <strong>${lead.company_name}</strong>'s website &#x2014; checking how well it appears in AI search engines (ChatGPT, Google AI Overviews, Perplexity):</p>\n\n  <p style=\"margin:20px 0;\">\n    <a href=\"${job.report_url}\" style=\"background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;\">\n      &#x2192; View Your Free Report\n    </a>\n  </p>\n\n  <p><strong>Current GEO Score: ${scores.geo_score}/100</strong> (industry average: 61/100)</p>\n  <p style=\"color:#16a34a;\"><em>${opportunity}</em></p>\n\n  <p><strong>Top issues found:</strong></p>\n  <ul style=\"padding-left:20px;\">${issues_html}</ul>\n\n  <p>If you'd like a free 20-minute call to walk through these findings and discuss next steps, just reply to this email.</p>\n\n  <br>\n  <p>Best,<br>\n  <strong>Cosmin Stan</strong><br>\n  <a href=\"https://nrankai.com\" style=\"color:#4f46e5;\">nrankai.com</a> | hello@nrankai.com</p>\n\n  <p style=\"color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:24px;\">\n    You received this because your website was included in a free AI visibility analysis.\n    Not interested? Simply ignore this email.\n  </p>\n</div>`;\n}\n\nreturn [{ json: {\n  to: lead.email,\n  subject,\n  html,\n  first_name: lead.first_name,\n  company: lead.company_name,\n  job_id: job.job_id\n}}];"
+      },
+      "id": "33333333-0003-0003-0003-000000000004",
+      "name": "Build Cold Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "33333333-0003-0003-0003-000000000005",
+      "name": "Send Cold Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "name": "Brevo nrankai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "text",
+        "responseBody": "=Email sent to {{ $('Build Cold Email').item.json.to }} ✓"
+      },
+      "id": "33333333-0003-0003-0003-000000000006",
+      "name": "Respond: Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "text",
+        "responseBody": "Skipped ✓"
+      },
+      "id": "33333333-0003-0003-0003-000000000007",
+      "name": "Respond: Skipped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 420]
+    }
+  ],
+  "connections": {
+    "Approval Webhook": {
+      "main": [[{ "node": "Get Job Details", "type": "main", "index": 0 }]]
+    },
+    "Get Job Details": {
+      "main": [[{ "node": "Send or Skip?", "type": "main", "index": 0 }]]
+    },
+    "Send or Skip?": {
+      "main": [
+        [{ "node": "Build Cold Email", "type": "main", "index": 0 }],
+        [{ "node": "Respond: Skipped", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Cold Email": {
+      "main": [[{ "node": "Send Cold Email", "type": "main", "index": 0 }]]
+    },
+    "Send Cold Email": {
+      "main": [[{ "node": "Respond: Sent", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "tags": [{ "name": "lead-audit" }]
+}

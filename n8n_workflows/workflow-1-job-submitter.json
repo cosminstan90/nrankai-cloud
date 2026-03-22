@@ -1,0 +1,128 @@
+{
+  "name": "1. Lead Audit — Job Submitter",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "11111111-0001-0001-0001-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "website",
+              "value": "https://example.com",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "email",
+              "value": "contact@example.com",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "first_name",
+              "value": "Test",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "company_name",
+              "value": "Example Co",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "language",
+              "value": "en",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11111111-0001-0001-0001-000000000002",
+      "name": "Lead Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notes": "Fill in lead details here. When connected to a lead source, replace this node with the data source."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.nrankai.com/api/lead-audits",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ZHTtEj3AcLt1Zs4B7aCyhc9Mbav28qO2a_blaN_kFAA"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"website\": \"{{ $json.website }}\",\n  \"lead\": {\n    \"email\": \"{{ $json.email }}\",\n    \"first_name\": \"{{ $json.first_name }}\",\n    \"company_name\": \"{{ $json.company_name }}\",\n    \"language\": \"{{ $json.language }}\"\n  },\n  \"options\": { \"audit_type\": \"GEO_AUDIT\" }\n}",
+        "options": {}
+      },
+      "id": "11111111-0001-0001-0001-000000000003",
+      "name": "Create Audit Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "o1",
+              "name": "job_id",
+              "value": "={{ $json.job_id }}",
+              "type": "string"
+            },
+            {
+              "id": "o2",
+              "name": "report_url",
+              "value": "={{ $json.report_url }}",
+              "type": "string"
+            },
+            {
+              "id": "o3",
+              "name": "status_url",
+              "value": "={{ $json.status_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11111111-0001-0001-0001-000000000004",
+      "name": "Job Created",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Lead Data", "type": "main", "index": 0 }]]
+    },
+    "Lead Data": {
+      "main": [[{ "node": "Create Audit Job", "type": "main", "index": 0 }]]
+    },
+    "Create Audit Job": {
+      "main": [[{ "node": "Job Created", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "tags": [{ "name": "lead-audit" }]
+}
