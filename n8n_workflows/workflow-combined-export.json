@@ -211,7 +211,7 @@
       "webhookId": "875a6907-dd1c-4885-a025-8ab182592d00",
       "credentials": {
         "smtp": {
-          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "id": "WpJeNkEjXjRUeLpf",
           "name": "Brevo nrankai"
         }
       }
@@ -345,7 +345,7 @@
       "webhookId": "66d712ce-545c-4a65-8283-4f3cb934bd4c",
       "credentials": {
         "smtp": {
-          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "id": "WpJeNkEjXjRUeLpf",
           "name": "Brevo nrankai"
         }
       }

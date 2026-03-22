@@ -89,7 +89,7 @@
       "position": [1120, 200],
       "credentials": {
         "smtp": {
-          "id": "REPLACE_WITH_NRANKAI_SMTP_CREDENTIAL_ID",
+          "id": "WpJeNkEjXjRUeLpf",
           "name": "Brevo nrankai"
         }
       }
