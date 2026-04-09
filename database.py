@@ -94,75 +94,116 @@ async def init_db():
 
 
 # ── Prospect pipeline models ───────────────────────────────────────────────────
-# Imports needed for Column-style ORM (compatible with existing Mapped-style models)
-from sqlalchemy import Column, Float, Boolean, JSON, Enum as SAEnum, ForeignKey  # noqa: E402
+from sqlalchemy import Boolean, Float, ForeignKey, JSON  # noqa: E402
 
 
 class Prospect(Base):
     __tablename__ = "prospects"
 
-    id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(String(50), index=True)
-    url = Column(String(500))
-    business_name = Column(String(200))
-    business_category = Column(String(100))
-    location_city = Column(String(100))
-    location_state = Column(String(50))
-    google_place_id = Column(String(200), unique=True, index=True)
-    phone = Column(String(50), nullable=True)
-    email_address = Column(String(200), nullable=True)
-    google_rating = Column(Float, nullable=True)
-    review_count = Column(Integer, nullable=True)
-    has_website = Column(Boolean, default=True)
-    opportunity_score = Column(Integer, default=0)
-    design_score = Column(Integer, nullable=True)
-    geo_visibility_score = Column(Integer, nullable=True)
-    ai_citation_score = Column(Integer, nullable=True)
-    stack = Column(String(50), nullable=True)
-    is_old_site = Column(Boolean, nullable=True)
-    mobile_score = Column(Integer, nullable=True)
-    top_issues = Column(JSON, nullable=True)
-    segment = Column(String(50), nullable=True)
-    status = Column(
-        SAEnum(
-            "pending", "processing", "scored", "contacted", "replied", "booked",
-            name="prospect_status",
-        ),
-        default="pending",
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[Optional[str]] = mapped_column(String(50), index=True, nullable=True)
+    url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    business_name: Mapped[str] = mapped_column(String(200))
+    business_category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    location_city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    location_state: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    google_place_id: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    email_address: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    google_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    review_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    has_website: Mapped[Optional[bool]] = mapped_column(Boolean, default=True)
+    opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
+    design_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    geo_visibility_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    ai_citation_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    stack: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_old_site: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    mobile_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    top_issues: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    segment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # pending / processing / scored / contacted / replied / booked / unsubscribed
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    gap_report_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    competitors_found: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    ai_queries_run: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    gap_report_generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    callback_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    email_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    subject_used: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    open_count: Mapped[int] = mapped_column(Integer, default=0)
+    click_count: Mapped[int] = mapped_column(Integer, default=0)
+    first_opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
     )
-    gap_report_text = Column(Text, nullable=True)
-    competitors_found = Column(JSON, nullable=True)
-    ai_queries_run = Column(JSON, nullable=True)
-    gap_report_generated_at = Column(DateTime, nullable=True)
-    callback_url = Column(String(500), nullable=True)
-    email_sent_at = Column(DateTime, nullable=True)
-    subject_used = Column(String(500), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    processed_at = Column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 class EmailTemplate(Base):
     __tablename__ = "email_templates"
 
-    id = Column(Integer, primary_key=True)
-    segment = Column(String(50), unique=True, index=True)
-    subject = Column(Text)
-    body_html = Column(Text)
-    body_text = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    segment: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    subject: Mapped[str] = mapped_column(Text)
+    body_html: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    body_text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
 
 
 class CallbackLog(Base):
     __tablename__ = "callback_log"
 
-    id = Column(Integer, primary_key=True)
-    prospect_id = Column(Integer, ForeignKey("prospects.id"))
-    campaign_id = Column(String(50))
-    callback_url = Column(String(500))
-    payload = Column(JSON)
-    response_status = Column(Integer, nullable=True)
-    response_body = Column(Text, nullable=True)
-    attempt = Column(Integer, default=1)
-    sent_at = Column(DateTime, default=datetime.utcnow)
-    success = Column(Boolean, default=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    prospect_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("prospects.id"), nullable=True
+    )
+    campaign_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    callback_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    response_status: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    response_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    attempt: Mapped[int] = mapped_column(Integer, default=1)
+    sent_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    success: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class EmailTrackingEvent(Base):
+    __tablename__ = "email_tracking_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    prospect_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("prospects.id"), index=True, nullable=True
+    )
+    event_type: Mapped[str] = mapped_column(String(20))
+    link_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class Unsubscribe(Base):
+    __tablename__ = "unsubscribes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email_address: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    prospect_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("prospects.id"), nullable=True
+    )
+    reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )

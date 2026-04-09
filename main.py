@@ -123,6 +123,12 @@ app.include_router(prospects_router, prefix="/prospects", tags=["prospects"])
 from routes.email_templates import router as templates_router
 app.include_router(templates_router, prefix="/email-templates", tags=["email-templates"])
 
+from routes.tracking import router as tracking_router
+app.include_router(tracking_router, tags=["tracking"])
+
+from routes.unsubscribe import router as unsubscribe_router
+app.include_router(unsubscribe_router, tags=["unsubscribe"])
+
 
 # ── Landing page ──────────────────────────────────────────────────────────────
 

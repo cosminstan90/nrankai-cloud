@@ -198,9 +198,9 @@ class JobStatusResponse(BaseModel):
 class ProspectLeadIn(BaseModel):
     url: Optional[str] = None
     business_name: str
-    business_category: str
-    location_city: str
-    location_state: str
+    business_category: Optional[str] = None
+    location_city: Optional[str] = None
+    location_state: Optional[str] = None
     google_place_id: str
     phone: Optional[str] = None
     email_address: Optional[str] = None

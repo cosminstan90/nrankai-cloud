@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import require_n8n_key
+from auth import require_n8n_key, require_worker_key
 from database import CallbackLog, EmailTemplate, Prospect, get_session
 from schemas import BulkIntakeRequest, BulkIntakeResponse
 
@@ -181,6 +181,7 @@ async def list_prospects(
     segment: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     min_score: int = Query(0, ge=0, le=100),
+    limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_session),
     _: None = Depends(require_n8n_key),
@@ -197,7 +198,7 @@ async def list_prospects(
     if min_score:
         stmt = stmt.where(Prospect.opportunity_score >= min_score)
 
-    stmt = stmt.offset(offset).limit(50).order_by(Prospect.opportunity_score.desc())
+    stmt = stmt.offset(offset).limit(limit).order_by(Prospect.opportunity_score.desc())
 
     result = await db.execute(stmt)
     prospects = result.scalars().all()
@@ -217,7 +218,7 @@ def _safe_list_get(lst: list | None, index: int, default: str) -> str:
 async def email_preview(
     prospect_id: int,
     db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_n8n_key),
+    _: None = Depends(require_worker_key),
 ):
     """Returneaza template-ul de email cu placeholder-ele completate pentru prospect."""
     import os
@@ -315,7 +316,7 @@ async def export_csv(
     segment: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_n8n_key),
+    _: None = Depends(require_worker_key),
 ):
     """Download prospects as CSV."""
     stmt = select(Prospect)
@@ -376,7 +377,7 @@ async def retry_callback(
     prospect_id: int,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_n8n_key),
+    _: None = Depends(require_worker_key),
 ):
     """Re-trigger the callback for a prospect."""
     result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))

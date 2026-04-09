@@ -20,9 +20,43 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     [x-cloak] { display: none !important; }
+    /* Toast slide-in */
+    @keyframes toast-in {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    .toast-enter { animation: toast-in 0.25s ease forwards; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen" x-data="prospectsApp()" x-init="init()" x-cloak>
+
+  <!-- ── Toast notifications ── -->
+  <div class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:380px">
+    <template x-for="t in toasts" :key="t.id">
+      <div
+        class="toast-enter flex items-start gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium pointer-events-auto"
+        :class="{
+          'bg-red-950 border-red-800 text-red-300':     t.type === 'error',
+          'bg-amber-950 border-amber-800 text-amber-300': t.type === 'warn',
+          'bg-emerald-950 border-emerald-800 text-emerald-300': t.type === 'success',
+          'bg-slate-800 border-slate-700 text-slate-300': t.type === 'info',
+        }"
+      >
+        <!-- Icon -->
+        <span class="mt-0.5 shrink-0" x-text="{error:'✕', warn:'⚠', success:'✓', info:'ℹ'}[t.type] || 'ℹ'"></span>
+        <span class="flex-1 leading-snug" x-text="t.message"></span>
+        <button class="ml-1 opacity-60 hover:opacity-100 transition-opacity shrink-0" @click="dismissToast(t.id)">✕</button>
+      </div>
+    </template>
+  </div>
+
+  <!-- ── API key missing banner ── -->
+  <div
+    x-show="!apiKey"
+    class="bg-amber-950 border-b border-amber-800 px-6 py-2.5 text-sm text-amber-300 text-center"
+  >
+    Enter your API key above to load prospects data.
+  </div>
 
   <!-- ── Nav ── -->
   <nav class="border-b border-slate-800/60 sticky top-0 z-30 bg-slate-950/95 backdrop-blur">
@@ -187,8 +221,16 @@
       <!-- Loading bar -->
       <div x-show="loading" class="h-0.5 bg-indigo-600 animate-pulse w-full"></div>
 
+      <!-- Error state -->
+      <div x-show="!loading && fetchError" class="py-16 text-center">
+        <p class="text-red-400 text-sm font-medium" x-text="fetchError"></p>
+        <button @click="loadAll()" class="mt-3 px-4 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+          Try Again
+        </button>
+      </div>
+
       <!-- Empty state -->
-      <div x-show="!loading && prospects.length === 0" class="py-16 text-center">
+      <div x-show="!loading && !fetchError && prospects.length === 0" class="py-16 text-center">
         <p class="text-slate-500 text-sm">No prospects found.</p>
         <p class="text-slate-600 text-xs mt-1">Try adjusting filters or check your API key.</p>
       </div>
@@ -432,6 +474,9 @@
       page: 1,
       total_pages: 1,
       loading: false,
+      fetchError: null,
+      toasts: [],
+      _toastSeq: 0,
       apiKey: localStorage.getItem('nrankai_api_key') || '',
 
       // ── Lifecycle ────────────────────────────────────────────────────────
@@ -455,9 +500,39 @@
         };
       },
 
+      // ── Toast system ──────────────────────────────────────────────────────
+      showToast(message, type = 'error') {
+        const id = ++this._toastSeq;
+        this.toasts.push({ id, message, type });
+        setTimeout(() => this.dismissToast(id), type === 'error' ? 6000 : 4000);
+      },
+
+      dismissToast(id) {
+        this.toasts = this.toasts.filter(t => t.id !== id);
+      },
+
+      // ── Centralised API error handler ─────────────────────────────────────
+      async _handleApiError(res, context) {
+        if (res.status === 401) {
+          this.showToast('Invalid or missing API key.', 'error');
+          return;
+        }
+        if (res.status === 404) {
+          this.showToast(`Not found: ${context}`, 'warn');
+          return;
+        }
+        let detail = `${context} failed (${res.status})`;
+        try {
+          const body = await res.json();
+          if (body.detail) detail = body.detail;
+        } catch { /* ignore parse errors */ }
+        this.showToast(detail, 'error');
+      },
+
       // ── Fetch prospects ───────────────────────────────────────────────────
       async fetchProspects() {
         this.loading = true;
+        this.fetchError = null;
         try {
           const offset = (this.page - 1) * PAGE_SIZE;
           const params = new URLSearchParams({
@@ -470,16 +545,24 @@
           if (this.filters.status)      params.set('status', this.filters.status);
 
           const res = await fetch(`/prospects/?${params}`, { headers: this._headers() });
-          if (!res.ok) { this.prospects = []; return; }
+          if (!res.ok) {
+            this.prospects = [];
+            if (res.status === 401) {
+              this.fetchError = 'Invalid API key — enter a valid Bearer token above.';
+            } else {
+              this.fetchError = `Failed to load prospects (HTTP ${res.status}).`;
+              this.showToast(this.fetchError, 'error');
+            }
+            return;
+          }
 
           const data = await res.json();
           this.prospects = data.map(p => ({ ...p, _generating: false, _marking: false }));
-
-          // Simple pagination: if full page returned assume there's more
           this.total_pages = data.length === PAGE_SIZE ? this.page + 1 : this.page;
         } catch (e) {
-          console.error('fetchProspects:', e);
           this.prospects = [];
+          this.fetchError = 'Network error — could not reach the server.';
+          this.showToast(this.fetchError, 'error');
         } finally {
           this.loading = false;
         }
@@ -491,15 +574,13 @@
           const params = new URLSearchParams({ limit: 1000, offset: 0, min_score: 0 });
           if (this.filters.campaign_id) params.set('campaign_id', this.filters.campaign_id);
           const res = await fetch(`/prospects/?${params}`, { headers: this._headers() });
-          if (!res.ok) return;
+          if (!res.ok) return; // fetchProspects already shows the error
           const all = await res.json();
-          this.stats.total          = all.length;
-          this.stats.scored         = all.filter(p => p.status === 'scored').length;
+          this.stats.total            = all.length;
+          this.stats.scored           = all.filter(p => p.status === 'scored').length;
           this.stats.high_opportunity = all.filter(p => (p.opportunity_score ?? 0) > 70).length;
-          this.stats.contacted      = all.filter(p => p.status === 'contacted').length;
-        } catch (e) {
-          console.error('fetchStats:', e);
-        }
+          this.stats.contacted        = all.filter(p => p.status === 'contacted').length;
+        } catch { /* silent — network error already shown by fetchProspects */ }
       },
 
       // ── Filters ──────────────────────────────────────────────────────────
@@ -540,8 +621,7 @@
         try {
           const res = await fetch(`/prospects/${p.id}/email-preview`, { headers: this._headers() });
           if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'Could not load email preview.');
+            await this._handleApiError(res, 'Email preview');
             return;
           }
           const data = await res.json();
@@ -553,8 +633,8 @@
             business_name: p.business_name,
             _copied: false,
           };
-        } catch (e) {
-          console.error('openPreview:', e);
+        } catch {
+          this.showToast('Network error — could not load email preview.', 'error');
         }
       },
 
@@ -566,13 +646,13 @@
             headers: this._headers(),
           });
           if (res.ok) {
+            this.showToast('Gap report generated.', 'success');
             await this.fetchProspects();
           } else {
-            const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'Gap report generation failed.');
+            await this._handleApiError(res, 'Gap report generation');
           }
-        } catch (e) {
-          console.error('generateGapReport:', e);
+        } catch {
+          this.showToast('Network error — gap report generation failed.', 'error');
         } finally {
           p._generating = false;
         }
@@ -591,12 +671,12 @@
           });
           if (res.ok) {
             p.status = 'contacted';
+            this.showToast(`${p.business_name} marked as contacted.`, 'success');
           } else {
-            const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'Could not mark as contacted.');
+            await this._handleApiError(res, 'Mark contacted');
           }
-        } catch (e) {
-          console.error('markContacted:', e);
+        } catch {
+          this.showToast('Network error — could not mark as contacted.', 'error');
         } finally {
           p._marking = false;
         }
@@ -605,16 +685,22 @@
       // ── Bulk actions ─────────────────────────────────────────────────────
       async bulkRetryCallbacks() {
         const ids = [...this.selected];
+        let ok = 0, failed = 0;
         for (const id of ids) {
           try {
-            await fetch(`/prospects/${id}/retry-callback`, {
+            const res = await fetch(`/prospects/${id}/retry-callback`, {
               method: 'POST',
               headers: this._headers(),
             });
-          } catch (e) { /* best-effort */ }
+            res.ok ? ok++ : failed++;
+          } catch { failed++; }
         }
         this.selected = [];
-        alert(`Retry queued for ${ids.length} prospect(s).`);
+        if (failed === 0) {
+          this.showToast(`Retry queued for ${ok} prospect(s).`, 'success');
+        } else {
+          this.showToast(`${ok} queued, ${failed} failed.`, failed === ids.length ? 'error' : 'warn');
+        }
       },
 
       exportSelectedCsv() {

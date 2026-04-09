@@ -160,7 +160,24 @@ async def _score_single_prospect(prospect_id: int, campaign_id: str) -> None:
             await db.commit()
             return
 
-        # ── 7. Fire callback if configured ───────────────────────────────────
+        # ── 7. Skip if email is unsubscribed ─────────────────────────────────
+        if prospect.email_address:
+            from database import Unsubscribe
+            unsub_res = await db.execute(
+                _select(Unsubscribe).where(
+                    Unsubscribe.email_address == prospect.email_address.lower().strip()
+                )
+            )
+            if unsub_res.scalar_one_or_none() is not None:
+                prospect.status = "unsubscribed"
+                await db.commit()
+                logger.info(
+                    "Prospect %d skipped — email %s is unsubscribed",
+                    prospect_id, prospect.email_address,
+                )
+                return
+
+        # ── 8. Fire callback if configured ───────────────────────────────────
         if prospect.callback_url:
             try:
                 await send_callback(prospect_id, db)
