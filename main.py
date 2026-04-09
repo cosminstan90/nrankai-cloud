@@ -114,6 +114,15 @@ app.add_middleware(
 
 app.include_router(lead_audits_router, prefix="/api")
 
+from routes.tools import router as tools_router
+app.include_router(tools_router, prefix="/tools", tags=["tools"])
+
+from routes.prospects import router as prospects_router
+app.include_router(prospects_router, prefix="/prospects", tags=["prospects"])
+
+from routes.email_templates import router as templates_router
+app.include_router(templates_router, prefix="/email-templates", tags=["email-templates"])
+
 
 # ── Landing page ──────────────────────────────────────────────────────────────
 
