@@ -129,6 +129,9 @@ app.include_router(tracking_router, tags=["tracking"])
 from routes.unsubscribe import router as unsubscribe_router
 app.include_router(unsubscribe_router, tags=["unsubscribe"])
 
+from routes.webhooks import router as webhooks_router
+app.include_router(webhooks_router, prefix="/webhook", tags=["webhooks"])
+
 
 # ── Landing page ──────────────────────────────────────────────────────────────
 
