@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth import require_n8n_key
+from auth import require_worker_key
 from workers.site_design_detector import detect
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.post("/site-design")
 async def site_design_check(
     payload: dict,
-    _: None = Depends(require_n8n_key),
+    _: None = Depends(require_worker_key),
 ) -> dict:
     """
     Analyse a URL technically (stack, SSL, schema, mobile score, etc.).
