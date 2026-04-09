@@ -191,3 +191,30 @@ class JobStatusResponse(BaseModel):
     report_url: str
     result: Optional[Dict[str, Any]]
     error: Optional[Dict[str, Any]]
+
+
+# ── Prospect bulk intake ──────────────────────────────────────────────────────
+
+class ProspectLeadIn(BaseModel):
+    url: Optional[str] = None
+    business_name: str
+    business_category: str
+    location_city: str
+    location_state: str
+    google_place_id: str
+    phone: Optional[str] = None
+    email_address: Optional[str] = None
+    google_rating: Optional[float] = None
+    review_count: Optional[int] = None
+
+
+class BulkIntakeRequest(BaseModel):
+    leads: List[ProspectLeadIn]
+    campaign_id: str
+    callback_url: Optional[str] = None
+
+
+class BulkIntakeResponse(BaseModel):
+    accepted: int
+    duplicates: int
+    job_id: str
