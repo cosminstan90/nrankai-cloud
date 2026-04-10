@@ -135,6 +135,26 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Security headers
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Request body size limit — bulk prospect payloads can be large but shouldn't
+# exceed 2 MB (500 leads × ~4 KB each). Hard-fail anything bigger.
+class ContentSizeLimitMiddleware(BaseHTTPMiddleware):
+    _MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+
+    async def dispatch(self, request: Request, call_next):
+        cl = request.headers.get("content-length")
+        if cl:
+            try:
+                if int(cl) > self._MAX_BYTES:
+                    return JSONResponse(
+                        {"detail": "Request body too large (max 2 MB)."},
+                        status_code=413,
+                    )
+            except ValueError:
+                pass
+        return await call_next(request)
+
+app.add_middleware(ContentSizeLimitMiddleware)
+
 # CORS — only allow our own origins
 app.add_middleware(
     CORSMiddleware,
