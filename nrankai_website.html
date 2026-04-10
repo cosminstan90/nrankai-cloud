@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en" id="html-root">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- EN meta (default) -->
+  <title id="meta-title">nrankai.com — AI Search Visibility for Local Businesses</title>
+  <meta id="meta-desc" name="description"
+    content="Find out if ChatGPT, Google AI Overviews, and Perplexity are recommending your business — or your competitors. Free GEO audit for beauty clinics and med spas." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="nrankai.com — AI Search Visibility" />
+  <meta property="og:description" content="Free GEO audit. See how AI search engines see your business." />
+  <meta property="og:url" content="https://nrankai.com" />
+  <meta property="og:type" content="website" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .glow { box-shadow: 0 0 60px rgba(129,140,248,0.12); }
+    .glow-sm { box-shadow: 0 0 30px rgba(129,140,248,0.08); }
+
+    /* Language toggle */
+    .lang-en, .lang-ro { display: none; }
+    html[lang="en"] .lang-en { display: initial; }
+    html[lang="ro"] .lang-ro { display: initial; }
+    html[lang="en"] .lang-en.block { display: block; }
+    html[lang="ro"] .lang-ro.block { display: block; }
+    html[lang="en"] .lang-en.flex { display: flex; }
+    html[lang="ro"] .lang-ro.flex { display: flex; }
+    html[lang="en"] .lang-en.inline-flex { display: inline-flex; }
+    html[lang="ro"] .lang-ro.inline-flex { display: inline-flex; }
+    html[lang="en"] .lang-en.grid { display: grid; }
+    html[lang="ro"] .lang-ro.grid { display: grid; }
+
+    /* Step connector line */
+    .step-line { position: absolute; top: 22px; left: calc(50% + 24px); right: calc(-50% + 24px); height: 1px; background: linear-gradient(90deg, #334155, transparent); }
+
+    /* Smooth scroll */
+    html { scroll-behavior: smooth; }
+
+    /* Spinner */
+    .spinner { border: 3px solid rgba(129,140,248,0.2); border-top-color: #818cf8; border-radius: 50%; width: 26px; height: 26px; animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- ══════════════════ NAV ══════════════════ -->
+  <nav class="sticky top-0 z-50 border-b border-slate-800/60 bg-slate-950/90 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+
+      <a href="#" class="font-bold text-white tracking-tight text-lg flex-shrink-0">
+        nrankai<span class="text-indigo-400">.com</span>
+      </a>
+
+      <!-- Desktop nav links -->
+      <div class="hidden md:flex items-center gap-8 text-sm text-slate-400">
+        <a href="#how-it-works" class="hover:text-white transition-colors lang-en">How it works</a>
+        <a href="#services"     class="hover:text-white transition-colors lang-en">Services</a>
+        <a href="#pricing"      class="hover:text-white transition-colors lang-en">Pricing</a>
+        <a href="#how-it-works" class="hover:text-white transition-colors lang-ro">Cum funcționează</a>
+        <a href="#services"     class="hover:text-white transition-colors lang-ro">Servicii</a>
+        <a href="#pricing"      class="hover:text-white transition-colors lang-ro">Prețuri</a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Language toggle -->
+        <div class="flex items-center rounded-lg border border-slate-700 overflow-hidden text-xs font-medium">
+          <button id="btn-en"
+            onclick="setLang('en')"
+            class="px-3 py-1.5 transition-colors bg-indigo-600 text-white">
+            EN
+          </button>
+          <button id="btn-ro"
+            onclick="setLang('ro')"
+            class="px-3 py-1.5 transition-colors text-slate-400 hover:text-white">
+            RO
+          </button>
+        </div>
+
+        <!-- CTA -->
+        <a href="#audit"
+          class="hidden sm:inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-colors">
+          <span class="lang-en">Free Audit →</span>
+          <span class="lang-ro">Audit Gratuit →</span>
+        </a>
+      </div>
+
+    </div>
+  </nav>
+
+
+  <!-- ══════════════════ HERO ══════════════════ -->
+  <section class="max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
+
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs font-medium mb-8">
+      <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+      <span class="lang-en">GEO · Generative Engine Optimization</span>
+      <span class="lang-ro">GEO · Optimizare pentru motoare generative</span>
+    </div>
+
+    <!-- EN Hero -->
+    <div class="lang-en block">
+      <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black text-white leading-[1.05] mb-6">
+        Is your business<br/>
+        <span class="gradient-text">invisible to AI search?</span>
+      </h1>
+      <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed mb-4">
+        When patients search on ChatGPT, Google AI Overviews or Perplexity for
+        <em>"best med spa near me"</em> — AI recommends whoever shows up in its training data.
+        <strong class="text-slate-200">Is that you or your competitor?</strong>
+      </p>
+      <p class="text-slate-500 text-sm mb-12">
+        We audit, score, and fix your AI search presence. Built for beauty clinics &amp; med spas in the US.
+      </p>
+    </div>
+
+    <!-- RO Hero -->
+    <div class="lang-ro block">
+      <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black text-white leading-[1.05] mb-6">
+        Afacerea ta este<br/>
+        <span class="gradient-text">invizibilă în AI search?</span>
+      </h1>
+      <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed mb-4">
+        Când potențialii clienți caută pe ChatGPT, Google AI Overviews sau Perplexity
+        <em>„cel mai bun salon lângă mine"</em> — AI recomandă pe cine găsește în datele sale.
+        <strong class="text-slate-200">Ești tu sau concurentul tău?</strong>
+      </p>
+      <p class="text-slate-500 text-sm mb-12">
+        Analizăm, scor&ăm și rezolvăm prezența ta în AI search. Specializat pentru clinici de beauty &amp; med spa din US.
+      </p>
+    </div>
+
+    <!-- Hero CTA buttons -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+      <a href="#audit"
+        class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors text-base">
+        <span class="lang-en">Get my free GEO audit →</span>
+        <span class="lang-ro">Vreau auditul gratuit →</span>
+      </a>
+      <a href="#how-it-works"
+        class="px-8 py-4 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-semibold rounded-xl transition-colors text-base">
+        <span class="lang-en">See how it works</span>
+        <span class="lang-ro">Cum funcționează</span>
+      </a>
+    </div>
+
+    <!-- Social proof strip -->
+    <div class="mt-16 flex flex-wrap gap-8 justify-center items-center text-slate-600 text-xs">
+      <span class="flex items-center gap-1.5">
+        <span class="text-emerald-400 font-bold text-sm">✓</span>
+        <span class="lang-en">No credit card required</span>
+        <span class="lang-ro">Fără card de credit</span>
+      </span>
+      <span class="w-px h-4 bg-slate-800 hidden sm:block"></span>
+      <span class="flex items-center gap-1.5">
+        <span class="text-emerald-400 font-bold text-sm">✓</span>
+        <span class="lang-en">Report in 1–3 minutes</span>
+        <span class="lang-ro">Raport în 1–3 minute</span>
+      </span>
+      <span class="w-px h-4 bg-slate-800 hidden sm:block"></span>
+      <span class="flex items-center gap-1.5">
+        <span class="text-emerald-400 font-bold text-sm">✓</span>
+        <span class="lang-en">No spam, ever</span>
+        <span class="lang-ro">Zero spam</span>
+      </span>
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════ STAT BAND ══════════════════ -->
+  <section class="border-y border-slate-800/50 bg-slate-900/40">
+    <div class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+
+      <div>
+        <p class="text-3xl font-black text-white mb-1">61<span class="text-indigo-400">/100</span></p>
+        <p class="text-xs text-slate-500 lang-en">Average GEO score we see</p>
+        <p class="text-xs text-slate-500 lang-ro">Scor GEO mediu observat</p>
+      </div>
+      <div>
+        <p class="text-3xl font-black text-white mb-1">3 <span class="text-indigo-400 text-lg font-semibold">AI engines</span></p>
+        <p class="text-xs text-slate-500 lang-en">ChatGPT · Perplexity · Google AIO</p>
+        <p class="text-xs text-slate-500 lang-ro">ChatGPT · Perplexity · Google AIO</p>
+      </div>
+      <div>
+        <p class="text-3xl font-black text-white mb-1">&lt;<span class="text-indigo-400">3 min</span></p>
+        <p class="text-xs text-slate-500 lang-en">To get your full report</p>
+        <p class="text-xs text-slate-500 lang-ro">Pentru raportul complet</p>
+      </div>
+      <div>
+        <p class="text-3xl font-black text-white mb-1">100<span class="text-indigo-400">%</span></p>
+        <p class="text-xs text-slate-500 lang-en">Free for first audit</p>
+        <p class="text-xs text-slate-500 lang-ro">Gratuit pentru primul audit</p>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ WHAT IS GEO ══════════════════ -->
+  <section class="max-w-6xl mx-auto px-6 py-24">
+
+    <div class="text-center mb-16">
+      <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3">GEO vs SEO</p>
+      <h2 class="text-3xl sm:text-4xl font-black text-white mb-4">
+        <span class="lang-en">SEO got you on Google.<br/><span class="text-slate-400 font-normal text-2xl">GEO gets you into AI answers.</span></span>
+        <span class="lang-ro">SEO te-a pus pe Google.<br/><span class="text-slate-400 font-normal text-2xl">GEO te pune în răspunsurile AI.</span></span>
+      </h2>
+      <p class="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed lang-en">
+        AI engines like ChatGPT don't look at ads or PageRank. They pull from structured, authoritative content.
+        Most small businesses have zero presence there — which means opportunity for early movers.
+      </p>
+      <p class="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed lang-ro">
+        Motoarele AI precum ChatGPT nu se uită la reclame sau PageRank. Extrag din conținut structurat și autoritar.
+        Majoritatea afacerilor mici au zero prezență acolo — ceea ce înseamnă oportunitate pentru cei care acționează acum.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-7 glow-sm">
+        <div class="text-3xl mb-4">🤖</div>
+        <h3 class="font-bold text-white mb-2 lang-en">AI Search is now mainstream</h3>
+        <h3 class="font-bold text-white mb-2 lang-ro">AI Search e acum mainstream</h3>
+        <p class="text-slate-400 text-sm leading-relaxed lang-en">
+          ChatGPT, Perplexity, and Google AI Overviews handle billions of queries monthly.
+          They increasingly replace the first click on traditional search.
+        </p>
+        <p class="text-slate-400 text-sm leading-relaxed lang-ro">
+          ChatGPT, Perplexity și Google AI Overviews procesează miliarde de interogări lunar.
+          Înlocuiesc tot mai des primul click din căutarea tradițională.
+        </p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-7 glow-sm">
+        <div class="text-3xl mb-4">📉</div>
+        <h3 class="font-bold text-white mb-2 lang-en">Most local businesses score below 40</h3>
+        <h3 class="font-bold text-white mb-2 lang-ro">Majoritatea afacerilor locale scor sub 40</h3>
+        <p class="text-slate-400 text-sm leading-relaxed lang-en">
+          A GEO score below 40 means AI engines essentially can't find or recommend your business.
+          The industry average we see is 61/100 — there's room to improve.
+        </p>
+        <p class="text-slate-400 text-sm leading-relaxed lang-ro">
+          Un scor GEO sub 40 înseamnă că motoarele AI practic nu pot găsi sau recomanda afacerea ta.
+          Media din industrie pe care o vedem este 61/100 — există loc de îmbunătățire.
+        </p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-7 glow-sm">
+        <div class="text-3xl mb-4">🚀</div>
+        <h3 class="font-bold text-white mb-2 lang-en">Early mover advantage is real</h3>
+        <h3 class="font-bold text-white mb-2 lang-ro">Avantajul primilor mișcători este real</h3>
+        <p class="text-slate-400 text-sm leading-relaxed lang-en">
+          GEO is where SEO was in 2005. Businesses that optimize now will own their local category
+          in AI search before competitors even know it exists.
+        </p>
+        <p class="text-slate-400 text-sm leading-relaxed lang-ro">
+          GEO este unde era SEO în 2005. Afacerile care optimizează acum vor domina categoria lor locală
+          în AI search înainte ca rivalii să știe că există.
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════ HOW IT WORKS ══════════════════ -->
+  <section id="how-it-works" class="border-t border-slate-800/50">
+    <div class="max-w-6xl mx-auto px-6 py-24">
+
+      <div class="text-center mb-16">
+        <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3 lang-en">Process</p>
+        <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3 lang-ro">Proces</p>
+        <h2 class="text-3xl sm:text-4xl font-black text-white lang-en">Three steps to visibility</h2>
+        <h2 class="text-3xl sm:text-4xl font-black text-white lang-ro">Trei pași spre vizibilitate</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-8 relative">
+
+        <div class="text-center space-y-4 relative">
+          <div class="w-12 h-12 rounded-full bg-indigo-950 border-2 border-indigo-600 flex items-center justify-center mx-auto text-indigo-300 font-black text-lg">1</div>
+          <h3 class="font-bold text-white lang-en">Submit your website</h3>
+          <h3 class="font-bold text-white lang-ro">Trimite website-ul tău</h3>
+          <p class="text-slate-400 text-sm leading-relaxed lang-en">Enter your URL and email. No account needed, no credit card, no catch.</p>
+          <p class="text-slate-400 text-sm leading-relaxed lang-ro">Introdu URL-ul și emailul. Nu e nevoie de cont, card de credit sau alte complicații.</p>
+        </div>
+
+        <div class="text-center space-y-4 relative">
+          <div class="w-12 h-12 rounded-full bg-indigo-950 border-2 border-indigo-600 flex items-center justify-center mx-auto text-indigo-300 font-black text-lg">2</div>
+          <h3 class="font-bold text-white lang-en">We run the audit</h3>
+          <h3 class="font-bold text-white lang-ro">Rulăm auditul</h3>
+          <p class="text-slate-400 text-sm leading-relaxed lang-en">Our system scans your site for GEO signals: schema markup, AI citation readiness, authority signals and more.</p>
+          <p class="text-slate-400 text-sm leading-relaxed lang-ro">Sistemul nostru scanează site-ul pentru semnale GEO: schema markup, pregătire pentru citare AI, semnale de autoritate și altele.</p>
+        </div>
+
+        <div class="text-center space-y-4 relative">
+          <div class="w-12 h-12 rounded-full bg-indigo-950 border-2 border-indigo-600 flex items-center justify-center mx-auto text-indigo-300 font-black text-lg">3</div>
+          <h3 class="font-bold text-white lang-en">Get your report & fix list</h3>
+          <h3 class="font-bold text-white lang-ro">Primești raportul &amp; lista de fix-uri</h3>
+          <p class="text-slate-400 text-sm leading-relaxed lang-en">In 1–3 minutes you get a scored report with the exact issues holding you back and what to fix first.</p>
+          <p class="text-slate-400 text-sm leading-relaxed lang-ro">În 1–3 minute primești un raport cu scor, problemele exacte care te țin înapoi și ce să rezolvi mai întâi.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ SERVICES ══════════════════ -->
+  <section id="services" class="border-t border-slate-800/50 bg-slate-900/30">
+    <div class="max-w-6xl mx-auto px-6 py-24">
+
+      <div class="text-center mb-16">
+        <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3 lang-en">What you get</p>
+        <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3 lang-ro">Ce primești</p>
+        <h2 class="text-3xl sm:text-4xl font-black text-white lang-en">Everything in your free report</h2>
+        <h2 class="text-3xl sm:text-4xl font-black text-white lang-ro">Tot ce conține raportul gratuit</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <!-- Card 1 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400 text-lg mb-4">📊</div>
+          <h4 class="font-semibold text-white mb-1 lang-en">GEO Visibility Score</h4>
+          <h4 class="font-semibold text-white mb-1 lang-ro">Scor de Vizibilitate GEO</h4>
+          <p class="text-slate-400 text-sm lang-en">A single 0–100 number showing how visible your site is to AI search engines right now.</p>
+          <p class="text-slate-400 text-sm lang-ro">Un număr de la 0 la 100 care arată cât de vizibil este site-ul tău pentru motoarele AI în acest moment.</p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400 text-lg mb-4">📈</div>
+          <h4 class="font-semibold text-white mb-1 lang-en">Industry Benchmark</h4>
+          <h4 class="font-semibold text-white mb-1 lang-ro">Referință din industrie</h4>
+          <p class="text-slate-400 text-sm lang-en">See exactly how your score compares to the average in your sector. Know if you're ahead or behind.</p>
+          <p class="text-slate-400 text-sm lang-ro">Compară-ți scorul cu media din sectorul tău. Știi imediat dacă ești înainte sau în urmă.</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-xl bg-red-950 border border-red-800 flex items-center justify-center text-red-400 text-lg mb-4">🔍</div>
+          <h4 class="font-semibold text-white mb-1 lang-en">Top Issues Found</h4>
+          <h4 class="font-semibold text-white mb-1 lang-ro">Principalele probleme</h4>
+          <p class="text-slate-400 text-sm lang-en">The specific technical and content problems dragging your score down, ranked by impact — not a generic checklist.</p>
+          <p class="text-slate-400 text-sm lang-ro">Problemele tehnice și de conținut care îți scad scorul, ordonate după impact — nu o listă generică.</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-800 flex items-center justify-center text-emerald-400 text-lg mb-4">⚡</div>
+          <h4 class="font-semibold text-white mb-1 lang-en">Quick Wins</h4>
+          <h4 class="font-semibold text-white mb-1 lang-ro">Câștiguri rapide</h4>
+          <p class="text-slate-400 text-sm lang-en">Changes you or your developer can make this week that will meaningfully move your GEO score.</p>
+          <p class="text-slate-400 text-sm lang-ro">Modificări pe care tu sau dezvoltatorul tău le puteți face această săptămână pentru a îmbunătăți scorul GEO.</p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-xl bg-amber-950 border border-amber-800 flex items-center justify-center text-amber-400 text-lg mb-4">📝</div>
+          <h4 class="font-semibold text-white mb-1 lang-en">Executive Summary</h4>
+          <h4 class="font-semibold text-white mb-1 lang-ro">Rezumat executiv</h4>
+          <p class="text-slate-400 text-sm lang-en">A plain-English explanation of where you stand and what's at stake if you don't act.</p>
+          <p class="text-slate-400 text-sm lang-ro">O explicație clară despre unde te afli și ce riști dacă nu acționezi.</p>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-xl bg-violet-950 border border-violet-800 flex items-center justify-center text-violet-400 text-lg mb-4">🎯</div>
+          <h4 class="font-semibold text-white mb-1 lang-en">Shareable Report Link</h4>
+          <h4 class="font-semibold text-white mb-1 lang-ro">Link de raport partajabil</h4>
+          <p class="text-slate-400 text-sm lang-en">Your report lives at a permanent URL you can share with your team, web developer or marketing agency.</p>
+          <p class="text-slate-400 text-sm lang-ro">Raportul tău are un URL permanent pe care îl poți trimite echipei, dezvoltatorului sau agenției de marketing.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ PRICING ══════════════════ -->
+  <section id="pricing" class="border-t border-slate-800/50">
+    <div class="max-w-6xl mx-auto px-6 py-24">
+
+      <div class="text-center mb-16">
+        <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3 lang-en">Pricing</p>
+        <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3 lang-ro">Prețuri</p>
+        <h2 class="text-3xl sm:text-4xl font-black text-white lang-en">Start free, upgrade when ready</h2>
+        <h2 class="text-3xl sm:text-4xl font-black text-white lang-ro">Începe gratuit, upgradează când ești pregătit</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+
+        <!-- Free -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-7 flex flex-col">
+          <div class="mb-6">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2 lang-en">Free</p>
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2 lang-ro">Gratuit</p>
+            <p class="text-4xl font-black text-white">$0</p>
+            <p class="text-slate-500 text-xs mt-1 lang-en">No credit card</p>
+            <p class="text-slate-500 text-xs mt-1 lang-ro">Fără card</p>
+          </div>
+          <ul class="space-y-2 text-sm text-slate-400 flex-1 mb-6">
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">1 GEO audit</span><span class="lang-ro">1 audit GEO</span></li>
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">Full scored report</span><span class="lang-ro">Raport complet cu scor</span></li>
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">Top 5 issues</span><span class="lang-ro">Top 5 probleme</span></li>
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">3 quick wins</span><span class="lang-ro">3 câștiguri rapide</span></li>
+          </ul>
+          <a href="#audit"
+            class="block text-center py-2.5 px-4 border border-slate-700 hover:border-indigo-600 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-colors">
+            <span class="lang-en">Get free audit</span>
+            <span class="lang-ro">Audit gratuit</span>
+          </a>
+        </div>
+
+        <!-- Pro — highlighted -->
+        <div class="bg-slate-900 border-2 border-indigo-600 rounded-2xl p-7 flex flex-col glow relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+            <span class="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full lang-en">Most popular</span>
+            <span class="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full lang-ro">Cel mai popular</span>
+          </div>
+          <div class="mb-6">
+            <p class="text-indigo-400 text-xs font-semibold uppercase tracking-wide mb-2 lang-en">Pro</p>
+            <p class="text-indigo-400 text-xs font-semibold uppercase tracking-wide mb-2 lang-ro">Pro</p>
+            <p class="text-4xl font-black text-white">$199<span class="text-slate-400 text-lg font-normal">/mo</span></p>
+            <p class="text-slate-500 text-xs mt-1 lang-en">Cancel anytime</p>
+            <p class="text-slate-500 text-xs mt-1 lang-ro">Anulezi oricând</p>
+          </div>
+          <ul class="space-y-2 text-sm text-slate-300 flex-1 mb-6">
+            <li class="flex gap-2"><span class="text-indigo-400">✓</span> <span class="lang-en">Monthly full audit</span><span class="lang-ro">Audit complet lunar</span></li>
+            <li class="flex gap-2"><span class="text-indigo-400">✓</span> <span class="lang-en">Competitor comparison</span><span class="lang-ro">Comparație cu concurența</span></li>
+            <li class="flex gap-2"><span class="text-indigo-400">✓</span> <span class="lang-en">Implementation checklist</span><span class="lang-ro">Checklist de implementare</span></li>
+            <li class="flex gap-2"><span class="text-indigo-400">✓</span> <span class="lang-en">Email support</span><span class="lang-ro">Suport prin email</span></li>
+            <li class="flex gap-2"><span class="text-indigo-400">✓</span> <span class="lang-en">Progress tracking</span><span class="lang-ro">Urmărire progres</span></li>
+          </ul>
+          <a href="mailto:hello@nrankai.com?subject=Pro%20plan"
+            class="block text-center py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-colors">
+            <span class="lang-en">Get started →</span>
+            <span class="lang-ro">Începe →</span>
+          </a>
+        </div>
+
+        <!-- Agency -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-7 flex flex-col">
+          <div class="mb-6">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2 lang-en">Agency</p>
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2 lang-ro">Agenție</p>
+            <p class="text-4xl font-black text-white lang-en">Custom</p>
+            <p class="text-4xl font-black text-white lang-ro">Personalizat</p>
+            <p class="text-slate-500 text-xs mt-1 lang-en">10+ clients</p>
+            <p class="text-slate-500 text-xs mt-1 lang-ro">10+ clienți</p>
+          </div>
+          <ul class="space-y-2 text-sm text-slate-400 flex-1 mb-6">
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">Bulk auditing via API</span><span class="lang-ro">Audituri în bulk prin API</span></li>
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">White-label reports</span><span class="lang-ro">Rapoarte white-label</span></li>
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">n8n workflow integration</span><span class="lang-ro">Integrare n8n</span></li>
+            <li class="flex gap-2"><span class="text-emerald-400">✓</span> <span class="lang-en">Dedicated support</span><span class="lang-ro">Suport dedicat</span></li>
+          </ul>
+          <a href="mailto:hello@nrankai.com?subject=Agency%20plan"
+            class="block text-center py-2.5 px-4 border border-slate-700 hover:border-indigo-600 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-colors">
+            <span class="lang-en">Contact us</span>
+            <span class="lang-ro">Contactează-ne</span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ FREE AUDIT FORM ══════════════════ -->
+  <section id="audit" class="border-t border-slate-800/50 bg-slate-900/40">
+    <div class="max-w-6xl mx-auto px-6 py-24">
+
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+        <!-- Left: copy -->
+        <div>
+          <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-4 lang-en">Free audit</p>
+          <p class="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-4 lang-ro">Audit gratuit</p>
+          <h2 class="text-3xl sm:text-4xl font-black text-white mb-4 lang-en">Find out where you stand — free</h2>
+          <h2 class="text-3xl sm:text-4xl font-black text-white mb-4 lang-ro">Află unde te afli — gratuit</h2>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6 lang-en">
+            Enter your website and email. We'll run a full GEO scan and send you a scored report
+            with specific issues and quick wins — in under 3 minutes.
+          </p>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6 lang-ro">
+            Introdu website-ul și emailul tău. Rulăm o scanare GEO completă și îți trimitem un raport
+            cu scor, probleme specifice și câștiguri rapide — în mai puțin de 3 minute.
+          </p>
+          <!-- Mini score mockup -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 max-w-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-sm lang-en">Your GEO Score</span>
+              <span class="text-slate-400 text-sm lang-ro">Scorul tău GEO</span>
+              <span class="text-2xl font-black text-orange-400">38<span class="text-slate-500 text-sm font-normal">/100</span></span>
+            </div>
+            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full rounded-full bg-orange-400 transition-all" style="width:38%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-600">
+              <span class="lang-en">Your site</span>
+              <span class="lang-ro">Site-ul tău</span>
+              <span class="lang-en">Industry avg: 61</span>
+              <span class="lang-ro">Medie industrie: 61</span>
+            </div>
+            <div class="border-t border-slate-800 pt-3 space-y-1.5">
+              <div class="flex gap-2 text-xs">
+                <span class="px-1.5 py-0.5 rounded bg-red-950 text-red-400 font-bold flex-shrink-0">Critical</span>
+                <span class="text-slate-400 lang-en">No structured data markup</span>
+                <span class="text-slate-400 lang-ro">Lipsă structured data markup</span>
+              </div>
+              <div class="flex gap-2 text-xs">
+                <span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 font-bold flex-shrink-0">Major</span>
+                <span class="text-slate-400 lang-en">Content too thin for AI citation</span>
+                <span class="text-slate-400 lang-ro">Conținut prea subțire pentru citare AI</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 italic lang-en">Example — your results will differ</p>
+            <p class="text-xs text-slate-600 italic lang-ro">Exemplu — rezultatele tale vor fi diferite</p>
+          </div>
+        </div>
+
+        <!-- Right: form -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 glow" id="audit-form-card">
+
+          <form id="audit-form" class="space-y-4" novalidate>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5 lang-en" for="website">Your website URL</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5 lang-ro" for="website">URL-ul website-ului tău</label>
+              <input id="website" type="url" placeholder="https://yourwebsite.com" required
+                class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+                       focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5 lang-en" for="email">Your email</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5 lang-ro" for="email">Emailul tău</label>
+              <input id="email" type="email" placeholder="you@company.com" required
+                class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+                       focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5" for="first_name">
+                <span class="lang-en">First name <span class="text-slate-600 font-normal">(optional)</span></span>
+                <span class="lang-ro">Prenume <span class="text-slate-600 font-normal">(opțional)</span></span>
+              </label>
+              <input id="first_name" type="text" placeholder="Alex"
+                class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500
+                       focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm" />
+            </div>
+
+            <div id="form-error" class="hidden text-red-400 text-sm px-1"></div>
+
+            <button type="submit" id="submit-btn"
+              class="w-full py-3.5 px-6 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700
+                     text-white font-bold rounded-xl transition-colors text-sm
+                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <span class="lang-en">Run my free GEO audit →</span>
+              <span class="lang-ro">Rulează auditul gratuit →</span>
+            </button>
+
+            <p class="text-slate-600 text-xs lang-en">We'll analyse your homepage and email findings. No spam, ever.</p>
+            <p class="text-slate-600 text-xs lang-ro">Analizăm homepage-ul și trimitem concluziile pe email. Zero spam, vreodată.</p>
+          </form>
+
+          <!-- Loading -->
+          <div id="loading-state" class="hidden text-center py-6 space-y-4">
+            <div class="spinner mx-auto"></div>
+            <p class="text-white font-semibold lang-en">Submitting your audit…</p>
+            <p class="text-white font-semibold lang-ro">Se trimite auditul…</p>
+            <p class="text-slate-400 text-sm lang-en">Just a second.</p>
+            <p class="text-slate-400 text-sm lang-ro">Un moment.</p>
+          </div>
+
+          <!-- Success -->
+          <div id="success-state" class="hidden text-center space-y-5">
+            <div class="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-800 flex items-center justify-center mx-auto">
+              <svg class="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-white font-bold text-lg lang-en">Your audit is running!</p>
+              <p class="text-white font-bold text-lg lang-ro">Auditul rulează!</p>
+              <p class="text-slate-400 text-sm mt-1 lang-en">Usually 1–3 minutes. Bookmark the link below.</p>
+              <p class="text-slate-400 text-sm mt-1 lang-ro">De obicei 1–3 minute. Salvează link-ul de mai jos.</p>
+            </div>
+            <a id="report-link" href="#"
+               class="inline-block w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors text-sm">
+              <span class="lang-en">View my report →</span>
+              <span class="lang-ro">Văd raportul meu →</span>
+            </a>
+          </div>
+
+          <!-- Error -->
+          <div id="error-state" class="hidden text-center space-y-4">
+            <p class="text-red-400 font-semibold lang-en">Something went wrong.</p>
+            <p class="text-red-400 font-semibold lang-ro">Ceva a mers greșit.</p>
+            <p class="text-slate-400 text-sm" id="error-detail"></p>
+            <button onclick="resetForm()" class="text-indigo-400 hover:text-indigo-300 text-sm underline underline-offset-2">
+              <span class="lang-en">Try again</span>
+              <span class="lang-ro">Încearcă din nou</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ FAQ ══════════════════ -->
+  <section class="border-t border-slate-800/50">
+    <div class="max-w-3xl mx-auto px-6 py-24">
+
+      <div class="text-center mb-14">
+        <h2 class="text-3xl font-black text-white lang-en">Frequently asked questions</h2>
+        <h2 class="text-3xl font-black text-white lang-ro">Întrebări frecvente</h2>
+      </div>
+
+      <div class="space-y-4" id="faq-list">
+
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
+            <span class="font-medium text-white text-sm lang-en">What is GEO exactly?</span>
+            <span class="font-medium text-white text-sm lang-ro">Ce este GEO exact?</span>
+            <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-en">
+            GEO (Generative Engine Optimization) is the practice of optimizing your website so that AI-powered search engines — like ChatGPT, Perplexity, and Google AI Overviews — can find, understand, and recommend your business. It's different from traditional SEO because AI doesn't use PageRank; it uses structure, authority signals, and clear factual content.
+          </div>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-ro">
+            GEO (Generative Engine Optimization) este practica de a-ți optimiza website-ul astfel încât motoarele de căutare AI — precum ChatGPT, Perplexity și Google AI Overviews — să poată găsi, înțelege și recomanda afacerea ta. Este diferit de SEO tradițional pentru că AI nu folosește PageRank; folosește structură, semnale de autoritate și conținut factual clar.
+          </div>
+        </details>
+
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
+            <span class="font-medium text-white text-sm lang-en">Is the audit really free?</span>
+            <span class="font-medium text-white text-sm lang-ro">Auditul este cu adevărat gratuit?</span>
+            <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-en">
+            Yes, completely. No credit card, no account, no trial period. You get a full scored report with top issues and quick wins. We offer paid plans for ongoing monitoring and implementation help, but the initial audit is always free.
+          </div>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-ro">
+            Da, complet. Fără card de credit, fără cont, fără perioadă de trial. Primești un raport complet cu scor, probleme principale și câștiguri rapide. Oferim planuri plătite pentru monitorizare continuă și ajutor de implementare, dar auditul inițial este mereu gratuit.
+          </div>
+        </details>
+
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
+            <span class="font-medium text-white text-sm lang-en">How long does the audit take?</span>
+            <span class="font-medium text-white text-sm lang-ro">Cât durează auditul?</span>
+            <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-en">
+            Between 1 and 3 minutes. Our system scans your homepage, checks structured data, analyzes content quality for AI citation readiness, and generates the report automatically.
+          </div>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-ro">
+            Între 1 și 3 minute. Sistemul nostru scanează homepage-ul, verifică structured data, analizează calitatea conținutului pentru pregătire de citare AI și generează raportul automat.
+          </div>
+        </details>
+
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
+            <span class="font-medium text-white text-sm lang-en">Do you only work with beauty clinics and med spas?</span>
+            <span class="font-medium text-white text-sm lang-ro">Lucrați doar cu clinici de beauty și med spa?</span>
+            <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-en">
+            The free audit works for any website. Our paid outreach and optimization services are currently focused on beauty clinics and med spas in the US, where we have the deepest benchmarks and competitive data.
+          </div>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-ro">
+            Auditul gratuit funcționează pentru orice website. Serviciile noastre plătite de outreach și optimizare sunt în prezent concentrate pe clinicile de beauty și med spa din SUA, unde avem cele mai profunde repere și date competitive.
+          </div>
+        </details>
+
+        <details class="bg-slate-900 border border-slate-800 rounded-xl group">
+          <summary class="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
+            <span class="font-medium text-white text-sm lang-en">What do you do with my data?</span>
+            <span class="font-medium text-white text-sm lang-ro">Ce faceți cu datele mele?</span>
+            <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-en">
+            Your email and website URL are used solely to generate your report and send it to you. We don't sell data, don't share it with third parties, and you can unsubscribe from any follow-up emails at any time.
+          </div>
+          <div class="px-6 pb-5 text-slate-400 text-sm leading-relaxed lang-ro">
+            Emailul și URL-ul tău sunt folosite exclusiv pentru a genera raportul și a ți-l trimite. Nu vindem date, nu le partajăm cu terți și te poți dezabona de la orice email de follow-up oricând.
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ FOOTER ══════════════════ -->
+  <footer class="border-t border-slate-800">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <p class="font-bold text-white text-lg">nrankai<span class="text-indigo-400">.com</span></p>
+          <p class="text-slate-500 text-sm mt-1 lang-en">AI Search Visibility for Local Businesses</p>
+          <p class="text-slate-500 text-sm mt-1 lang-ro">Vizibilitate în AI Search pentru afaceri locale</p>
+        </div>
+        <div class="flex flex-wrap gap-6 text-sm text-slate-500">
+          <a href="mailto:hello@nrankai.com" class="hover:text-slate-300 transition-colors">hello@nrankai.com</a>
+          <a href="https://app.nrankai.com" class="hover:text-slate-300 transition-colors lang-en">Tool dashboard →</a>
+          <a href="https://app.nrankai.com" class="hover:text-slate-300 transition-colors lang-ro">Dashboard tool →</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-800/60 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-700">
+        <span>© 2026 nrankai.com</span>
+        <span class="lang-en">Built for beauty clinics &amp; med spas in the US</span>
+        <span class="lang-ro">Construit pentru clinici de beauty &amp; med spa din SUA</span>
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- ══════════════════ JS ══════════════════ -->
+  <script>
+    // ── Language toggle ──────────────────────────────────────────────────────
+    function setLang(lang) {
+      document.getElementById('html-root').lang = lang;
+      document.getElementById('btn-en').className =
+        lang === 'en'
+          ? 'px-3 py-1.5 transition-colors bg-indigo-600 text-white'
+          : 'px-3 py-1.5 transition-colors text-slate-400 hover:text-white';
+      document.getElementById('btn-ro').className =
+        lang === 'ro'
+          ? 'px-3 py-1.5 transition-colors bg-indigo-600 text-white'
+          : 'px-3 py-1.5 transition-colors text-slate-400 hover:text-white';
+      localStorage.setItem('nrankai_lang', lang);
+    }
+
+    // Restore saved language
+    (function() {
+      const saved = localStorage.getItem('nrankai_lang');
+      const browser = navigator.language.toLowerCase().startsWith('ro') ? 'ro' : 'en';
+      setLang(saved || browser);
+    })();
+
+    // ── Audit form ────────────────────────────────────────────────────────────
+    const API_URL     = 'https://api.nrankai.com/api/lead-audits/submit';
+    const form        = document.getElementById('audit-form');
+    const loadingEl   = document.getElementById('loading-state');
+    const successEl   = document.getElementById('success-state');
+    const errorEl     = document.getElementById('error-state');
+    const errorDetail = document.getElementById('error-detail');
+    const reportLink  = document.getElementById('report-link');
+    const formError   = document.getElementById('form-error');
+    const submitBtn   = document.getElementById('submit-btn');
+
+    const isRo = () => document.getElementById('html-root').lang === 'ro';
+
+    function showOnly(el) {
+      [form, loadingEl, successEl, errorEl].forEach(e => e.classList.add('hidden'));
+      el.classList.remove('hidden');
+    }
+
+    function resetForm() {
+      showOnly(form);
+      formError.classList.add('hidden');
+      submitBtn.disabled = false;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      const website    = document.getElementById('website').value.trim();
+      const email      = document.getElementById('email').value.trim();
+      const first_name = document.getElementById('first_name').value.trim();
+
+      if (!website) {
+        formError.textContent = isRo()
+          ? 'Te rugăm să introduci URL-ul website-ului.'
+          : 'Please enter your website URL.';
+        formError.classList.remove('hidden');
+        return;
+      }
+      if (!email) {
+        formError.textContent = isRo()
+          ? 'Te rugăm să introduci adresa de email.'
+          : 'Please enter your email address.';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      let url = website;
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+      submitBtn.disabled = true;
+      showOnly(loadingEl);
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ website: url, email, first_name: first_name || 'there' }),
+        });
+
+        if (res.status === 429) {
+          errorDetail.textContent = isRo()
+            ? 'Ai trimis prea multe audituri recent. Te rugăm să aștepți o oră.'
+            : "Too many recent requests. Please wait an hour and try again.";
+          showOnly(errorEl);
+          return;
+        }
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          errorDetail.textContent = data.detail || (isRo() ? 'Ceva a mers greșit.' : 'Something went wrong. Please try again.');
+          showOnly(errorEl);
+          return;
+        }
+
+        const data = await res.json();
+        reportLink.href = data.report_url;
+        showOnly(successEl);
+
+      } catch {
+        errorDetail.textContent = isRo()
+          ? 'Nu s-a putut contacta serverul. Verifică conexiunea.'
+          : 'Could not reach the server. Please check your connection.';
+        showOnly(errorEl);
+      }
+    });
+  </script>
+
+</body>
+</html>
