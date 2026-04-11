@@ -47,7 +47,7 @@ _GIF_RESPONSE = Response(
 
 def generate_tracking_token(prospect_id: int) -> str:
     """HMAC-SHA256 token derived from CLOUD_WEBHOOK_SECRET + prospect_id."""
-    secret = os.getenv("CLOUD_WEBHOOK_SECRET", "default-secret")
+    secret = os.environ["CLOUD_WEBHOOK_SECRET"]  # guaranteed set at startup by main.py
     return hmac.new(secret.encode(), str(prospect_id).encode(), hashlib.sha256).hexdigest()[:16]
 
 
@@ -121,9 +121,14 @@ async def click_redirect(
     """
     destination = unquote(url)
 
-    # Safety: only redirect to http(s) URLs
-    if not destination.startswith(("http://", "https://")):
-        destination = "https://" + destination
+    # Strictly validate scheme — reject protocol-relative (//evil.com), file://, etc.
+    # Anything that isn't explicitly http:// or https:// gets dropped to a safe fallback.
+    if not destination.startswith("https://") and not destination.startswith("http://"):
+        logger.warning(
+            "click_redirect: rejected unsafe destination %r for prospect %d",
+            destination, prospect_id,
+        )
+        return RedirectResponse(url="https://nrankai.com", status_code=302)
 
     if verify_tracking_token(prospect_id, token):
         ip = request.client.host if request.client else None

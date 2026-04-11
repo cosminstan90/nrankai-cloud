@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, EmailStr, HttpUrl, field_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
 
 # ── Inbound (n8n → cloud) ─────────────────────────────────────────────────────
@@ -196,22 +196,32 @@ class JobStatusResponse(BaseModel):
 # ── Prospect bulk intake ──────────────────────────────────────────────────────
 
 class ProspectLeadIn(BaseModel):
-    url: Optional[str] = None
-    business_name: str
-    business_category: Optional[str] = None
-    location_city: Optional[str] = None
-    location_state: Optional[str] = None
-    google_place_id: str
-    phone: Optional[str] = None
-    email_address: Optional[str] = None
-    google_rating: Optional[float] = None
-    review_count: Optional[int] = None
+    url: Optional[str] = Field(None, max_length=2048)
+    business_name: str = Field(..., max_length=200)
+    business_category: Optional[str] = Field(None, max_length=100)
+    location_city: Optional[str] = Field(None, max_length=100)
+    location_state: Optional[str] = Field(None, max_length=100)
+    google_place_id: str = Field(..., max_length=200)
+    phone: Optional[str] = Field(None, max_length=30)
+    email_address: Optional[str] = Field(None, max_length=200)
+    google_rating: Optional[float] = Field(None, ge=0.0, le=5.0)
+    review_count: Optional[int] = Field(None, ge=0)
 
 
 class BulkIntakeRequest(BaseModel):
-    leads: List[ProspectLeadIn]
-    campaign_id: str
-    callback_url: Optional[str] = None
+    leads: List[ProspectLeadIn] = Field(..., min_length=1, max_length=500)
+    campaign_id: str = Field(..., max_length=100)
+    callback_url: Optional[str] = Field(None, max_length=2048)
+
+    @field_validator("callback_url")
+    @classmethod
+    def validate_callback_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("callback_url must use http:// or https:// scheme")
+        return v
 
 
 class BulkIntakeResponse(BaseModel):

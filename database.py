@@ -109,7 +109,7 @@ class Prospect(Base):
     location_state: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     google_place_id: Mapped[str] = mapped_column(String(200), unique=True, index=True)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    email_address: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    email_address: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, index=True)
     google_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     review_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     has_website: Mapped[Optional[bool]] = mapped_column(Boolean, default=True)

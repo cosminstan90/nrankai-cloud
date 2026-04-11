@@ -391,7 +391,28 @@ async def retry_callback(
     return {"status": "retry_queued", "prospect_id": prospect_id}
 
 
-# ── 8. GET /prospects/dashboard ───────────────────────────────────────────────
+# ── 8. GET /prospects/{id} ────────────────────────────────────────────────────
+# NOTE: must be declared BEFORE /dashboard to avoid routing conflict.
+
+@router.get("/{prospect_id}")
+async def get_prospect(
+    prospect_id: int,
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_n8n_key),
+):
+    """
+    Fetch a single prospect by ID.
+    Used by n8n workflow node 'check-opened' after the 3-day wait to read
+    open_count and phone before deciding whether to send an SMS follow-up.
+    """
+    result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
+    prospect = result.scalar_one_or_none()
+    if prospect is None:
+        raise HTTPException(status_code=404, detail=f"Prospect '{prospect_id}' not found")
+    return _prospect_to_dict(prospect)
+
+
+# ── 9. GET /prospects/dashboard ───────────────────────────────────────────────
 
 @router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
 async def prospects_dashboard(request: Request):

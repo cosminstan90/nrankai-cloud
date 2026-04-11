@@ -29,7 +29,7 @@ _templates = Jinja2Templates(directory="templates")
 
 def generate_unsubscribe_token(email: str) -> str:
     """HMAC-SHA256 token keyed from CLOUD_WEBHOOK_SECRET + email address."""
-    secret = os.getenv("CLOUD_WEBHOOK_SECRET", "default-secret")
+    secret = os.environ["CLOUD_WEBHOOK_SECRET"]  # guaranteed set at startup by main.py
     return hmac.new(secret.encode(), email.lower().encode(), hashlib.sha256).hexdigest()[:16]
 
 
