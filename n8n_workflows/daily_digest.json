@@ -1,0 +1,140 @@
+{
+  "name": "nrankai - Daily Digest",
+  "nodes": [
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "d0000001-cafe-babe-dead-beef00000001",
+      "name": "schedule-daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "notes": "Runs every day at 08:00. Cron: 0 8 * * *"
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.nrankai.com/admin/stats",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic REPLACE_WITH_BASE64_ADMIN_CREDENTIALS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0000002-cafe-babe-dead-beef00000002",
+      "name": "get-stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "notes": "Basic auth header = base64(ADMIN_USERNAME:ADMIN_PASSWORD). Generate with: btoa('user:pass') in browser console, then set: Basic <result>"
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.nrankai.com/admin/warm-leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic REPLACE_WITH_BASE64_ADMIN_CREDENTIALS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0000003-cafe-babe-dead-beef00000003",
+      "name": "get-warm-leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 300],
+      "notes": "Returns array of warm leads (open_count > 0, not replied/booked/unsubscribed). typeVersion 4.2 auto-splits array into items — use $input.all() in Code node."
+    },
+
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const warmLeads = $input.all().map(i => i.json);\nconst stats = $('get-stats').first().json;\n\nconst ov = stats.pipeline_overview || {};\nconst ef = stats.email_funnel || {};\nconst roi = stats.roi || {};\nconst breakdown = ov.breakdown || {};\n\nconst today = new Date().toLocaleDateString('en-US', {\n  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'\n});\nconst warmCount = warmLeads.length;\nconst openRate = ef.open_rate || 0;\n\nconst subject = `nrankai daily — ${today} | ${warmCount} warm leads | ${openRate}% open rate`;\n\nconst top5 = warmLeads.slice(0, 5);\nconst warmRowsHtml = top5.map(l => {\n  const city = [l.location_city, l.location_state].filter(Boolean).join(', ') || '—';\n  return `<tr style=\"border-top:1px solid #334155;\">\n    <td style=\"padding:7px 10px;font-weight:600;color:#e2e8f0;\">${l.business_name || ''}</td>\n    <td style=\"padding:7px 10px;color:#94a3b8;\">${city}</td>\n    <td style=\"padding:7px 10px;text-align:right;color:#f59e0b;font-weight:700;\">${l.open_count || 0}</td>\n  </tr>`;\n}).join('');\n\nconst warmTable = top5.length > 0\n  ? `<table style=\"width:100%;border-collapse:collapse;\">\n      <tr style=\"color:#64748b;font-size:11px;text-transform:uppercase;\">\n        <th style=\"text-align:left;padding:4px 10px;\">Business</th>\n        <th style=\"text-align:left;padding:4px 10px;\">City</th>\n        <th style=\"text-align:right;padding:4px 10px;\">Opens</th>\n      </tr>\n      ${warmRowsHtml}\n    </table>`\n  : '<p style=\"color:#10b981;font-weight:600;margin:0;\">Inbox clear — no warm leads pending.</p>';\n\nconst kpis = [\n  { label: 'Total Prospects', value: ov.total_prospects || 0, color: '#e2e8f0' },\n  { label: 'Emails Sent', value: ef.sent || 0, color: '#e2e8f0' },\n  { label: 'Open Rate', value: openRate + '%', color: openRate > 20 ? '#10b981' : '#e2e8f0' },\n  { label: 'Warm Leads', value: warmCount, color: warmCount > 0 ? '#f59e0b' : '#10b981' },\n  { label: 'Booked', value: roi.total_booked || 0, color: (roi.total_booked || 0) > 0 ? '#10b981' : '#e2e8f0' },\n];\n\nconst kpiHtml = kpis.map(k =>\n  `<td style=\"text-align:center;padding:8px;\">\n    <div style=\"background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px 12px;\">\n      <div style=\"font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;\">${k.label}</div>\n      <div style=\"font-size:24px;font-weight:700;color:${k.color};margin-top:4px;\">${k.value}</div>\n    </div>\n  </td>`\n).join('');\n\nconst pipelineHtml = ['pending','scored','contacted','replied','booked','unsubscribed']\n  .map(s => `<span style=\"color:#94a3b8;font-size:13px;margin-right:16px;\">${s}: <strong style=\"color:#e2e8f0;\">${breakdown[s] || 0}</strong></span>`)\n  .join('');\n\nconst warmSectionHtml = warmCount > 0\n  ? `<div style=\"background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;margin-bottom:24px;\">\n      <div style=\"font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;\">Warm Leads — top ${Math.min(warmCount, 5)} of ${warmCount}</div>\n      ${warmTable}\n    </div>`\n  : `<div style=\"background:#134e2a;border:1px solid #166534;border-radius:8px;padding:16px;margin-bottom:24px;\">\n      <p style=\"color:#10b981;font-weight:600;margin:0;\">No warm leads pending — inbox is clear.</p>\n    </div>`;\n\nconst body_html = `<!DOCTYPE html>\n<html>\n<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>\n<body style=\"background:#0f172a;color:#e2e8f0;font-family:Arial,sans-serif;margin:0;padding:0;\">\n  <div style=\"max-width:620px;margin:0 auto;padding:32px 20px;\">\n    \n    <h1 style=\"color:#818cf8;font-size:20px;margin:0 0 4px;\">nrankai daily</h1>\n    <p style=\"color:#64748b;font-size:13px;margin:0 0 24px;\">${today}</p>\n    \n    <table style=\"width:100%;border-spacing:8px;border-collapse:separate;margin-bottom:24px;\"><tr>${kpiHtml}</tr></table>\n    \n    <div style=\"background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;margin-bottom:24px;\">\n      <div style=\"font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;\">Pipeline</div>\n      <div>${pipelineHtml}</div>\n    </div>\n    \n    ${warmSectionHtml}\n    \n    <div style=\"border-top:1px solid #1e293b;padding-top:20px;text-align:center;\">\n      <a href=\"https://api.nrankai.com/admin\" style=\"background:#4f46e5;color:#fff;text-decoration:none;padding:11px 28px;border-radius:6px;font-size:14px;font-weight:600;display:inline-block;\">Open Admin Dashboard</a>\n      <p style=\"color:#334155;font-size:11px;margin-top:16px;\">nrankai.com · automated daily digest</p>\n    </div>\n    \n  </div>\n</body>\n</html>`;\n\nreturn [{ json: { subject, body_html } }];"
+      },
+      "id": "d0000004-cafe-babe-dead-beef00000004",
+      "name": "build-email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "notes": "Merges stats + warm leads into subject + body_html. Uses $('get-stats').first().json for stats and $input.all() for warm leads."
+    },
+
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "hello@nrankai.com",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.body_html }}",
+        "options": {}
+      },
+      "id": "d0000005-cafe-babe-dead-beef00000005",
+      "name": "send-digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1400, 300],
+      "notes": "IMPORTANT: emailFormat must be 'html' (not emailType). html field references $json.body_html from build-email node.",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_ZOHO_SMTP_CREDENTIAL_ID",
+          "name": "Zoho nrankai"
+        }
+      }
+    }
+
+  ],
+
+  "connections": {
+    "schedule-daily": {
+      "main": [
+        [{ "node": "get-stats", "type": "main", "index": 0 }]
+      ]
+    },
+    "get-stats": {
+      "main": [
+        [{ "node": "get-warm-leads", "type": "main", "index": 0 }]
+      ]
+    },
+    "get-warm-leads": {
+      "main": [
+        [{ "node": "build-email", "type": "main", "index": 0 }]
+      ]
+    },
+    "build-email": {
+      "main": [
+        [{ "node": "send-digest", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "digest" },
+    { "name": "admin" }
+  ]
+}

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -18,6 +19,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from database import AsyncSessionLocal, LeadAuditJob, init_db
 from routes.lead_audits import router as lead_audits_router
 from tasks import stale_job_recovery_loop
+
+# ── Startup secret validation ─────────────────────────────────────────────────
+# Fail loudly at process start rather than silently using a weak default.
+_REQUIRED_SECRETS = ["CLOUD_WEBHOOK_SECRET", "N8N_API_KEY", "WORKER_API_KEY"]
+_missing = [k for k in _REQUIRED_SECRETS if not os.environ.get(k)]
+if _missing:
+    raise RuntimeError(
+        f"Missing required environment variables: {', '.join(_missing)}. "
+        "Set them in your .env file before starting the server."
+    )
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,6 +67,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        # CSP: unsafe-inline required for Alpine.js expressions + Tailwind CDN
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' https://cdn.tailwindcss.com https://unpkg.com 'unsafe-inline'; "
+            "style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "font-src 'self'; "
+            "connect-src 'self' https://api.nrankai.com; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self' https://api.nrankai.com;"
+        )
         # Remove server fingerprinting
         if "server" in response.headers:
             del response.headers["server"]
@@ -100,8 +123,37 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Global exception handler — logs full traceback server-side, returns generic JSON to client
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(
+        "Unhandled exception on %s %s\n%s",
+        request.method, request.url, traceback.format_exc(),
+    )
+    return JSONResponse({"detail": "Internal server error"}, status_code=500)
+
 # Security headers
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Request body size limit — bulk prospect payloads can be large but shouldn't
+# exceed 2 MB (500 leads × ~4 KB each). Hard-fail anything bigger.
+class ContentSizeLimitMiddleware(BaseHTTPMiddleware):
+    _MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+
+    async def dispatch(self, request: Request, call_next):
+        cl = request.headers.get("content-length")
+        if cl:
+            try:
+                if int(cl) > self._MAX_BYTES:
+                    return JSONResponse(
+                        {"detail": "Request body too large (max 2 MB)."},
+                        status_code=413,
+                    )
+            except ValueError:
+                pass
+        return await call_next(request)
+
+app.add_middleware(ContentSizeLimitMiddleware)
 
 # CORS — only allow our own origins
 app.add_middleware(
@@ -113,6 +165,27 @@ app.add_middleware(
 )
 
 app.include_router(lead_audits_router, prefix="/api")
+
+from routes.tools import router as tools_router
+app.include_router(tools_router, prefix="/tools", tags=["tools"])
+
+from routes.prospects import router as prospects_router
+app.include_router(prospects_router, prefix="/prospects", tags=["prospects"])
+
+from routes.email_templates import router as templates_router
+app.include_router(templates_router, prefix="/email-templates", tags=["email-templates"])
+
+from routes.tracking import router as tracking_router
+app.include_router(tracking_router, tags=["tracking"])
+
+from routes.unsubscribe import router as unsubscribe_router
+app.include_router(unsubscribe_router, tags=["unsubscribe"])
+
+from routes.webhooks import router as webhooks_router
+app.include_router(webhooks_router, prefix="/webhook", tags=["webhooks"])
+
+from routes.admin import router as admin_router
+app.include_router(admin_router, prefix="/admin", tags=["admin"])
 
 
 # ── Landing page ──────────────────────────────────────────────────────────────

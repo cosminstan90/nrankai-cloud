@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prospects Dashboard — nrankai.com</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .spinner-sm {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(129,140,248,0.25);
+      border-top-color: #818cf8;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    [x-cloak] { display: none !important; }
+    /* Toast slide-in */
+    @keyframes toast-in {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    .toast-enter { animation: toast-in 0.25s ease forwards; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen" x-data="prospectsApp()" x-init="init()" x-cloak>
+
+  <!-- ── Toast notifications ── -->
+  <div class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:380px">
+    <template x-for="t in toasts" :key="t.id">
+      <div
+        class="toast-enter flex items-start gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium pointer-events-auto"
+        :class="{
+          'bg-red-950 border-red-800 text-red-300':     t.type === 'error',
+          'bg-amber-950 border-amber-800 text-amber-300': t.type === 'warn',
+          'bg-emerald-950 border-emerald-800 text-emerald-300': t.type === 'success',
+          'bg-slate-800 border-slate-700 text-slate-300': t.type === 'info',
+        }"
+      >
+        <!-- Icon -->
+        <span class="mt-0.5 shrink-0" x-text="{error:'✕', warn:'⚠', success:'✓', info:'ℹ'}[t.type] || 'ℹ'"></span>
+        <span class="flex-1 leading-snug" x-text="t.message"></span>
+        <button class="ml-1 opacity-60 hover:opacity-100 transition-opacity shrink-0" @click="dismissToast(t.id)">✕</button>
+      </div>
+    </template>
+  </div>
+
+  <!-- ── API key missing banner ── -->
+  <div
+    x-show="!apiKey"
+    class="bg-amber-950 border-b border-amber-800 px-6 py-2.5 text-sm text-amber-300 text-center"
+  >
+    Enter your API key above to load prospects data.
+  </div>
+
+  <!-- ── Nav ── -->
+  <nav class="border-b border-slate-800/60 sticky top-0 z-30 bg-slate-950/95 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="font-bold text-white tracking-tight text-sm">nrankai<span class="text-indigo-400">.com</span></span>
+        <span class="text-slate-700">|</span>
+        <span class="text-slate-400 text-sm">Prospects Dashboard</span>
+      </div>
+      <!-- API Key input -->
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-500 hidden sm:block">API Key</label>
+        <input
+          type="password"
+          x-model="apiKey"
+          @input="saveKey()"
+          placeholder="Bearer token…"
+          class="w-48 px-3 py-1.5 text-xs rounded-lg bg-slate-800 border border-slate-700 text-slate-300 placeholder-slate-600
+                 focus:outline-none focus:border-indigo-500 transition-colors"
+        />
+        <button @click="loadAll()" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors">
+          Refresh
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+
+    <!-- ── SECTION 1: Stats cards ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Total Prospects</p>
+        <p class="text-3xl font-black text-white" x-text="stats.total">—</p>
+        <p class="text-xs text-slate-600 mt-1">across all campaigns</p>
+      </div>
+      <!-- Scored -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Scored</p>
+        <p class="text-3xl font-black text-sky-400" x-text="stats.scored">—</p>
+        <p class="text-xs text-slate-600 mt-1">analysis complete</p>
+      </div>
+      <!-- High opportunity -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">High Opportunity</p>
+        <p class="text-3xl font-black text-emerald-400" x-text="stats.high_opportunity">—</p>
+        <p class="text-xs text-slate-600 mt-1">score &gt; 70</p>
+      </div>
+      <!-- Contacted -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Contacted</p>
+        <p class="text-3xl font-black text-amber-400" x-text="stats.contacted">—</p>
+        <p class="text-xs text-slate-600 mt-1">outreach sent</p>
+      </div>
+    </div>
+
+    <!-- ── SECTION 2: Filters ── -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl px-5 py-4">
+      <div class="flex flex-wrap gap-3 items-end">
+        <!-- Campaign ID -->
+        <div class="flex flex-col gap-1 min-w-[160px]">
+          <label class="text-xs text-slate-500 font-medium">Campaign ID</label>
+          <input
+            type="text"
+            x-model="filters.campaign_id"
+            @input.debounce.300ms="onFilterChange()"
+            placeholder="e.g. q2-dental"
+            class="px-3 py-2 text-sm rounded-lg bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-600
+                   focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+
+        <!-- Segment -->
+        <div class="flex flex-col gap-1 min-w-[160px]">
+          <label class="text-xs text-slate-500 font-medium">Segment</label>
+          <select
+            x-model="filters.segment"
+            @change="onFilterChange()"
+            class="px-3 py-2 text-sm rounded-lg bg-slate-800 border border-slate-700 text-slate-200
+                   focus:outline-none focus:border-indigo-500 transition-colors"
+          >
+            <option value="">All segments</option>
+            <option value="no_geo_presence">No GEO Presence</option>
+            <option value="old_site">Old Site</option>
+            <option value="no_schema">No Schema</option>
+            <option value="good_site_bad_geo">Good Site, Bad GEO</option>
+            <option value="low_rating">Low Rating</option>
+          </select>
+        </div>
+
+        <!-- Status -->
+        <div class="flex flex-col gap-1 min-w-[140px]">
+          <label class="text-xs text-slate-500 font-medium">Status</label>
+          <select
+            x-model="filters.status"
+            @change="onFilterChange()"
+            class="px-3 py-2 text-sm rounded-lg bg-slate-800 border border-slate-700 text-slate-200
+                   focus:outline-none focus:border-indigo-500 transition-colors"
+          >
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="scored">Scored</option>
+            <option value="contacted">Contacted</option>
+            <option value="replied">Replied</option>
+            <option value="booked">Booked</option>
+          </select>
+        </div>
+
+        <!-- Min Score slider -->
+        <div class="flex flex-col gap-1 min-w-[160px]">
+          <label class="text-xs text-slate-500 font-medium">
+            Min Score: <span class="text-indigo-400 font-semibold" x-text="filters.min_score"></span>
+          </label>
+          <input
+            type="range" min="0" max="100" step="5"
+            x-model.number="filters.min_score"
+            @input="onFilterChange()"
+            class="accent-indigo-500 h-2 rounded cursor-pointer"
+          />
+        </div>
+
+        <!-- Reset -->
+        <button
+          @click="resetFilters()"
+          class="px-4 py-2 text-sm rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors self-end"
+        >
+          Reset Filters
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Bulk actions bar (visible only when items selected) ── -->
+    <div
+      x-show="selected.length > 0"
+      x-transition:enter="transition ease-out duration-150"
+      x-transition:enter-start="opacity-0 -translate-y-1"
+      x-transition:enter-end="opacity-100 translate-y-0"
+      class="bg-indigo-950 border border-indigo-800 rounded-xl px-5 py-3 flex items-center gap-4"
+    >
+      <span class="text-sm text-indigo-300 font-medium" x-text="`${selected.length} selected`"></span>
+      <div class="flex gap-2 ml-auto">
+        <button
+          @click="bulkRetryCallbacks()"
+          class="px-3 py-1.5 text-xs rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white font-medium transition-colors"
+        >
+          Retry Callbacks
+        </button>
+        <button
+          @click="exportSelectedCsv()"
+          class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors"
+        >
+          Export Selected CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- ── SECTION 3: Table ── -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+
+      <!-- Loading bar -->
+      <div x-show="loading" class="h-0.5 bg-indigo-600 animate-pulse w-full"></div>
+
+      <!-- Error state -->
+      <div x-show="!loading && fetchError" class="py-16 text-center">
+        <p class="text-red-400 text-sm font-medium" x-text="fetchError"></p>
+        <button @click="loadAll()" class="mt-3 px-4 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+          Try Again
+        </button>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="!loading && !fetchError && prospects.length === 0" class="py-16 text-center">
+        <p class="text-slate-500 text-sm">No prospects found.</p>
+        <p class="text-slate-600 text-xs mt-1">Try adjusting filters or check your API key.</p>
+      </div>
+
+      <!-- Table -->
+      <div x-show="prospects.length > 0" class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-left">
+              <th class="px-4 py-3 w-8">
+                <input type="checkbox"
+                  class="accent-indigo-500 cursor-pointer"
+                  @change="toggleSelectAll($event)"
+                  :checked="selected.length === prospects.length && prospects.length > 0"
+                />
+              </th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Business</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell">City</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden lg:table-cell">Category</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Score</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell">Segment</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden lg:table-cell">Email</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="p in prospects" :key="p.id">
+              <tr class="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+
+                <!-- Checkbox -->
+                <td class="px-4 py-3">
+                  <input type="checkbox"
+                    class="accent-indigo-500 cursor-pointer"
+                    :value="p.id"
+                    x-model="selected"
+                  />
+                </td>
+
+                <!-- Business -->
+                <td class="px-4 py-3">
+                  <div class="font-medium text-white text-sm" x-text="p.business_name || '—'"></div>
+                  <div class="text-xs text-slate-500 truncate max-w-[180px]" x-text="p.url || ''"></div>
+                </td>
+
+                <!-- City -->
+                <td class="px-4 py-3 text-slate-400 hidden md:table-cell" x-text="p.location_city || '—'"></td>
+
+                <!-- Category -->
+                <td class="px-4 py-3 hidden lg:table-cell">
+                  <span class="text-slate-400 text-xs" x-text="p.business_category || '—'"></span>
+                </td>
+
+                <!-- Score badge -->
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold"
+                    :class="{
+                      'bg-emerald-950 text-emerald-400': p.opportunity_score > 70,
+                      'bg-amber-950 text-amber-400':    p.opportunity_score >= 40 && p.opportunity_score <= 70,
+                      'bg-red-950 text-red-400':        p.opportunity_score < 40
+                    }"
+                    x-text="p.opportunity_score ?? '—'"
+                  ></span>
+                </td>
+
+                <!-- Segment badge -->
+                <td class="px-4 py-3 hidden md:table-cell">
+                  <span x-show="p.segment" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
+                    :class="segmentClass(p.segment)"
+                    x-text="segmentLabel(p.segment)"
+                  ></span>
+                  <span x-show="!p.segment" class="text-slate-600 text-xs">—</span>
+                </td>
+
+                <!-- Status badge -->
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                    :class="statusClass(p.status)"
+                    x-text="p.status || '—'"
+                  ></span>
+                </td>
+
+                <!-- Email -->
+                <td class="px-4 py-3 hidden lg:table-cell">
+                  <span class="text-slate-400 text-xs truncate max-w-[160px] block" x-text="p.email_address || '—'"></span>
+                </td>
+
+                <!-- Actions -->
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1.5 justify-end">
+                    <!-- Preview -->
+                    <button
+                      @click="openPreview(p)"
+                      class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors font-medium"
+                      title="Email Preview"
+                    >
+                      Preview
+                    </button>
+                    <!-- Generate -->
+                    <button
+                      @click="generateGapReport(p)"
+                      :disabled="p._generating"
+                      class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-indigo-700 text-slate-300 hover:text-white transition-colors font-medium disabled:opacity-50"
+                      title="Generate Gap Report"
+                    >
+                      <span x-show="!p._generating">Generate</span>
+                      <span x-show="p._generating" class="spinner-sm"></span>
+                    </button>
+                    <!-- Contacted -->
+                    <button
+                      @click="markContacted(p)"
+                      :disabled="p.status === 'contacted' || p._marking"
+                      class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-emerald-700 text-slate-300 hover:text-white transition-colors font-medium disabled:opacity-40"
+                      title="Mark as Contacted"
+                    >
+                      <span x-show="!p._marking">✓ Contacted</span>
+                      <span x-show="p._marking" class="spinner-sm"></span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SECTION 6: Pagination ── -->
+    <div x-show="total_pages > 1 || page > 1" class="flex items-center justify-between px-1">
+      <button
+        @click="prevPage()"
+        :disabled="page <= 1"
+        class="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg border border-slate-700 text-slate-400
+               hover:text-white hover:border-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        ← Previous
+      </button>
+      <span class="text-sm text-slate-500">
+        Page <span class="text-slate-300 font-medium" x-text="page"></span>
+        <span x-show="total_pages > 1"> of <span class="text-slate-300 font-medium" x-text="total_pages"></span></span>
+      </span>
+      <button
+        @click="nextPage()"
+        :disabled="page >= total_pages"
+        class="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg border border-slate-700 text-slate-400
+               hover:text-white hover:border-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        Next →
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ── SECTION 5: Email Preview Modal ── -->
+  <div
+    x-show="previewModal.open"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    @keydown.escape.window="previewModal.open = false"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+    @click.self="previewModal.open = false"
+  >
+    <div
+      x-transition:enter="transition ease-out duration-200"
+      x-transition:enter-start="opacity-0 scale-95"
+      x-transition:enter-end="opacity-100 scale-100"
+      class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl"
+    >
+      <!-- Modal header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 flex-shrink-0">
+        <div>
+          <h2 class="font-semibold text-white text-base">Email Preview</h2>
+          <p class="text-slate-400 text-xs mt-0.5" x-text="previewModal.business_name"></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span x-show="previewModal.segment"
+            class="text-xs px-2 py-0.5 rounded-md font-medium"
+            :class="segmentClass(previewModal.segment)"
+            x-text="segmentLabel(previewModal.segment)"
+          ></span>
+          <button @click="previewModal.open = false" class="text-slate-500 hover:text-white transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal body -->
+      <div class="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+        <!-- Subject -->
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Subject</p>
+          <p class="text-white font-semibold text-sm leading-relaxed" x-text="previewModal.subject || '—'"></p>
+        </div>
+        <!-- Body -->
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Body</p>
+          <pre class="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-slate-800/60 rounded-xl p-4 border border-slate-700/50 font-[inherit]"
+            x-text="previewModal.body_text || '—'"
+          ></pre>
+        </div>
+      </div>
+
+      <!-- Modal footer -->
+      <div class="px-6 py-4 border-t border-slate-800 flex items-center justify-between flex-shrink-0">
+        <span x-show="previewModal._copied" class="text-xs text-emerald-400 transition-opacity">Copied!</span>
+        <span x-show="!previewModal._copied" class="text-xs text-slate-600">Body text</span>
+        <div class="flex gap-2">
+          <button
+            @click="copyBody()"
+            class="px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
+          >
+            Copy to Clipboard
+          </button>
+          <button
+            @click="previewModal.open = false"
+            class="px-4 py-2 text-sm rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Alpine component ── -->
+  <script>
+  const PAGE_SIZE = 50;
+
+  function prospectsApp() {
+    return {
+      prospects: [],
+      stats: { total: 0, scored: 0, high_opportunity: 0, contacted: 0 },
+      filters: { campaign_id: '', segment: '', status: '', min_score: 0 },
+      selected: [],
+      previewModal: {
+        open: false, subject: '', body_text: '', segment: '', business_name: '', _copied: false
+      },
+      page: 1,
+      total_pages: 1,
+      loading: false,
+      fetchError: null,
+      toasts: [],
+      _toastSeq: 0,
+      apiKey: localStorage.getItem('nrankai_api_key') || '',
+
+      // ── Lifecycle ────────────────────────────────────────────────────────
+      async init() {
+        if (this.apiKey) await this.loadAll();
+      },
+
+      saveKey() {
+        localStorage.setItem('nrankai_api_key', this.apiKey);
+      },
+
+      async loadAll() {
+        await Promise.all([this.fetchProspects(), this.fetchStats()]);
+      },
+
+      // ── Auth headers ─────────────────────────────────────────────────────
+      _headers() {
+        return {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        };
+      },
+
+      // ── Toast system ──────────────────────────────────────────────────────
+      showToast(message, type = 'error') {
+        const id = ++this._toastSeq;
+        this.toasts.push({ id, message, type });
+        setTimeout(() => this.dismissToast(id), type === 'error' ? 6000 : 4000);
+      },
+
+      dismissToast(id) {
+        this.toasts = this.toasts.filter(t => t.id !== id);
+      },
+
+      // ── Centralised API error handler ─────────────────────────────────────
+      async _handleApiError(res, context) {
+        if (res.status === 401) {
+          this.showToast('Invalid or missing API key.', 'error');
+          return;
+        }
+        if (res.status === 404) {
+          this.showToast(`Not found: ${context}`, 'warn');
+          return;
+        }
+        let detail = `${context} failed (${res.status})`;
+        try {
+          const body = await res.json();
+          if (body.detail) detail = body.detail;
+        } catch { /* ignore parse errors */ }
+        this.showToast(detail, 'error');
+      },
+
+      // ── Fetch prospects ───────────────────────────────────────────────────
+      async fetchProspects() {
+        this.loading = true;
+        this.fetchError = null;
+        try {
+          const offset = (this.page - 1) * PAGE_SIZE;
+          const params = new URLSearchParams({
+            limit: PAGE_SIZE,
+            offset,
+            min_score: this.filters.min_score,
+          });
+          if (this.filters.campaign_id) params.set('campaign_id', this.filters.campaign_id);
+          if (this.filters.segment)     params.set('segment', this.filters.segment);
+          if (this.filters.status)      params.set('status', this.filters.status);
+
+          const res = await fetch(`/prospects/?${params}`, { headers: this._headers() });
+          if (!res.ok) {
+            this.prospects = [];
+            if (res.status === 401) {
+              this.fetchError = 'Invalid API key — enter a valid Bearer token above.';
+            } else {
+              this.fetchError = `Failed to load prospects (HTTP ${res.status}).`;
+              this.showToast(this.fetchError, 'error');
+            }
+            return;
+          }
+
+          const data = await res.json();
+          this.prospects = data.map(p => ({ ...p, _generating: false, _marking: false }));
+          this.total_pages = data.length === PAGE_SIZE ? this.page + 1 : this.page;
+        } catch (e) {
+          this.prospects = [];
+          this.fetchError = 'Network error — could not reach the server.';
+          this.showToast(this.fetchError, 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      // ── Stats derived from all filtered prospects (page-agnostic fetch) ──
+      async fetchStats() {
+        try {
+          const params = new URLSearchParams({ limit: 1000, offset: 0, min_score: 0 });
+          if (this.filters.campaign_id) params.set('campaign_id', this.filters.campaign_id);
+          const res = await fetch(`/prospects/?${params}`, { headers: this._headers() });
+          if (!res.ok) return; // fetchProspects already shows the error
+          const all = await res.json();
+          this.stats.total            = all.length;
+          this.stats.scored           = all.filter(p => p.status === 'scored').length;
+          this.stats.high_opportunity = all.filter(p => (p.opportunity_score ?? 0) > 70).length;
+          this.stats.contacted        = all.filter(p => p.status === 'contacted').length;
+        } catch { /* silent — network error already shown by fetchProspects */ }
+      },
+
+      // ── Filters ──────────────────────────────────────────────────────────
+      onFilterChange() {
+        this.page = 1;
+        this.selected = [];
+        this.fetchProspects();
+        this.fetchStats();
+      },
+
+      resetFilters() {
+        this.filters = { campaign_id: '', segment: '', status: '', min_score: 0 };
+        this.page = 1;
+        this.selected = [];
+        this.fetchProspects();
+        this.fetchStats();
+      },
+
+      // ── Selection ────────────────────────────────────────────────────────
+      toggleSelectAll(e) {
+        this.selected = e.target.checked ? this.prospects.map(p => p.id) : [];
+      },
+
+      // ── Pagination ───────────────────────────────────────────────────────
+      prevPage() {
+        if (this.page <= 1) return;
+        this.page--;
+        this.fetchProspects();
+      },
+      nextPage() {
+        if (this.page >= this.total_pages) return;
+        this.page++;
+        this.fetchProspects();
+      },
+
+      // ── Actions ──────────────────────────────────────────────────────────
+      async openPreview(p) {
+        try {
+          const res = await fetch(`/prospects/${p.id}/email-preview`, { headers: this._headers() });
+          if (!res.ok) {
+            await this._handleApiError(res, 'Email preview');
+            return;
+          }
+          const data = await res.json();
+          this.previewModal = {
+            open: true,
+            subject: data.subject,
+            body_text: data.body_text,
+            segment: data.segment,
+            business_name: p.business_name,
+            _copied: false,
+          };
+        } catch {
+          this.showToast('Network error — could not load email preview.', 'error');
+        }
+      },
+
+      async generateGapReport(p) {
+        p._generating = true;
+        try {
+          const res = await fetch(`/prospects/${p.id}/generate-gap-report`, {
+            method: 'POST',
+            headers: this._headers(),
+          });
+          if (res.ok) {
+            this.showToast('Gap report generated.', 'success');
+            await this.fetchProspects();
+          } else {
+            await this._handleApiError(res, 'Gap report generation');
+          }
+        } catch {
+          this.showToast('Network error — gap report generation failed.', 'error');
+        } finally {
+          p._generating = false;
+        }
+      },
+
+      async markContacted(p) {
+        p._marking = true;
+        try {
+          const res = await fetch(`/prospects/${p.id}/mark-contacted`, {
+            method: 'POST',
+            headers: this._headers(),
+            body: JSON.stringify({
+              email_sent_at: new Date().toISOString(),
+              subject_used: '',
+            }),
+          });
+          if (res.ok) {
+            p.status = 'contacted';
+            this.showToast(`${p.business_name} marked as contacted.`, 'success');
+          } else {
+            await this._handleApiError(res, 'Mark contacted');
+          }
+        } catch {
+          this.showToast('Network error — could not mark as contacted.', 'error');
+        } finally {
+          p._marking = false;
+        }
+      },
+
+      // ── Bulk actions ─────────────────────────────────────────────────────
+      async bulkRetryCallbacks() {
+        const ids = [...this.selected];
+        let ok = 0, failed = 0;
+        for (const id of ids) {
+          try {
+            const res = await fetch(`/prospects/${id}/retry-callback`, {
+              method: 'POST',
+              headers: this._headers(),
+            });
+            res.ok ? ok++ : failed++;
+          } catch { failed++; }
+        }
+        this.selected = [];
+        if (failed === 0) {
+          this.showToast(`Retry queued for ${ok} prospect(s).`, 'success');
+        } else {
+          this.showToast(`${ok} queued, ${failed} failed.`, failed === ids.length ? 'error' : 'warn');
+        }
+      },
+
+      exportSelectedCsv() {
+        const rows = this.prospects.filter(p => this.selected.includes(p.id));
+        if (!rows.length) return;
+        const cols = ['id','business_name','url','business_category','location_city','location_state',
+                      'email_address','phone','opportunity_score','segment','status'];
+        const csv  = [cols.join(','),
+          ...rows.map(r => cols.map(c => JSON.stringify(r[c] ?? '')).join(','))
+        ].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = Object.assign(document.createElement('a'), {
+          href: URL.createObjectURL(blob),
+          download: 'prospects_selected.csv',
+        });
+        a.click(); URL.revokeObjectURL(a.href);
+        this.selected = [];
+      },
+
+      // ── Copy modal body ──────────────────────────────────────────────────
+      async copyBody() {
+        try {
+          await navigator.clipboard.writeText(this.previewModal.body_text);
+        } catch {
+          // fallback
+          const ta = document.createElement('textarea');
+          ta.value = this.previewModal.body_text;
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        this.previewModal._copied = true;
+        setTimeout(() => { this.previewModal._copied = false; }, 2000);
+      },
+
+      // ── Badge helpers ────────────────────────────────────────────────────
+      segmentClass(seg) {
+        const map = {
+          no_geo_presence:  'bg-violet-950 text-violet-400',
+          old_site:         'bg-orange-950 text-orange-400',
+          no_schema:        'bg-sky-950 text-sky-400',
+          good_site_bad_geo:'bg-teal-950 text-teal-400',
+          low_rating:       'bg-yellow-950 text-yellow-400',
+          general:          'bg-slate-800 text-slate-400',
+        };
+        return map[seg] || 'bg-slate-800 text-slate-400';
+      },
+
+      segmentLabel(seg) {
+        const map = {
+          no_geo_presence:  'No GEO',
+          old_site:         'Old Site',
+          no_schema:        'No Schema',
+          good_site_bad_geo:'Bad GEO',
+          low_rating:       'Low Rating',
+          general:          'General',
+        };
+        return map[seg] || seg || '—';
+      },
+
+      statusClass(status) {
+        const map = {
+          pending:    'bg-slate-800 text-slate-400',
+          processing: 'bg-indigo-950 text-indigo-400',
+          scored:     'bg-sky-950 text-sky-400',
+          contacted:  'bg-emerald-950 text-emerald-400',
+          replied:    'bg-green-950 text-green-400',
+          booked:     'bg-purple-950 text-purple-400',
+        };
+        return map[status] || 'bg-slate-800 text-slate-400';
+      },
+    };
+  }
+  </script>
+
+</body>
+</html>

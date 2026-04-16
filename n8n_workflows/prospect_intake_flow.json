@@ -1,0 +1,404 @@
+{
+  "name": "nrankai - Prospect Intake & Outreach",
+  "nodes": [
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "outscraper-results",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b1000001-cafe-babe-dead-beef00000001",
+      "name": "receive-outscraper",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 240],
+      "webhookId": "outscraper-results",
+      "notes": "Receives raw leads from Outscraper / n8n HTTP node. POST body is an array of place objects."
+    },
+
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst filtered = items.filter(item => {\n  const d = item.json;\n  const rating = parseFloat(d.rating || d.google_rating || 0);\n  const hasEmail = d.email && d.email.includes('@');\n  return hasEmail && rating >= 2.5 && rating <= 4.7;\n});\nreturn filtered.length > 0 ? filtered : [{ json: { _skip: true } }];"
+      },
+      "id": "b1000002-cafe-babe-dead-beef00000002",
+      "name": "filter-eligible",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 240],
+      "notes": "Keep leads that: have an email, rating 2.5–4.7 (too high = no opportunity, no email = can't contact)"
+    },
+
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all().filter(i => !i.json._skip);\nif (items.length === 0) return [{ json: { accepted: 0, job_id: null } }];\nconst leads = items.map(i => ({\n  url: i.json.website || i.json.site || null,\n  business_name: i.json.name || i.json.business_name,\n  business_category: i.json.type || i.json.category || 'beauty clinic',\n  location_city: i.json.city,\n  location_state: i.json.state,\n  google_place_id: i.json.place_id || i.json.google_place_id,\n  phone: i.json.phone || null,\n  email_address: i.json.email,\n  google_rating: parseFloat(i.json.rating || 0),\n  review_count: parseInt(i.json.reviews || i.json.review_count || 0)\n}));\nreturn [{ json: {\n  campaign_id: `outscraper-${new Date().toISOString().slice(0,10)}`,\n  callback_url: 'https://n8n.stancosmin.com/webhook/prospect-scored',\n  leads: leads\n}}];"
+      },
+      "id": "b1000003-cafe-babe-dead-beef00000003",
+      "name": "build-bulk-payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 240],
+      "notes": "Normalises Outscraper field names into the /prospects/bulk schema. campaign_id is date-based for easy filtering."
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.nrankai.com/prospects/bulk",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_N8N_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "b1000004-cafe-babe-dead-beef00000004",
+      "name": "send-to-cloud",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 240],
+      "notes": "POST to /prospects/bulk. Cloud responds immediately with { accepted, duplicates, job_id }. Scoring runs async in the background."
+    },
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prospect-scored",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b1000005-cafe-babe-dead-beef00000005",
+      "name": "prospect-scored",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 700],
+      "webhookId": "prospect-scored",
+      "notes": "Called by callback_sender.py after scoring. Payload: prospect object with prospect_id, segment, email_address, etc."
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nif (!d.email_address || !d.segment || d.segment === 'general') {\n  return [{ json: { _skip: true } }];\n}\nreturn [{ json: d }];"
+      },
+      "id": "b1000006-cafe-babe-dead-beef00000006",
+      "name": "check-skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 700],
+      "notes": "Skip prospects with no email, no segment, or segment=general (no personalised template available)"
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.nrankai.com/unsubscribe/check?email={{ encodeURIComponent($json.email_address) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_N8N_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000007-cafe-babe-dead-beef00000007",
+      "name": "check-unsubscribe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 700],
+      "notes": "CAN-SPAM compliance check before sending any email. Returns { email, is_unsubscribed: bool }"
+    },
+
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-unsub",
+              "leftValue": "={{ $json.is_unsubscribed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000008-cafe-babe-dead-beef00000008",
+      "name": "is-unsubscribed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 700],
+      "notes": "TRUE (index 0) → stop. FALSE (index 1) → continue to email send."
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.nrankai.com/prospects/{{ $('prospect-scored').item.json.prospect_id }}/email-preview",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_N8N_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000009-cafe-babe-dead-beef00000009",
+      "name": "get-email-preview",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 700],
+      "notes": "Returns { subject, body_html, body_text, segment, pixel_html, unsubscribe_url } with all placeholders already resolved by the cloud API."
+    },
+
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "={{ $('prospect-scored').item.json.email_address }}",
+        "subject": "={{ $('get-email-preview').item.json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $('get-email-preview').item.json.body_html + ($('get-email-preview').item.json.pixel_html || '') }}",
+        "options": {}
+      },
+      "id": "b1000010-cafe-babe-dead-beef00000010",
+      "name": "send-outreach",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1800, 700],
+      "notes": "IMPORTANT: emailFormat must be 'html' (not emailType). pixel_html appended for open tracking.",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_ZOHO_SMTP_CREDENTIAL_ID",
+          "name": "Zoho nrankai"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.nrankai.com/prospects/{{ $('prospect-scored').item.json.prospect_id }}/mark-contacted",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_N8N_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email_sent_at: new Date().toISOString(), subject_used: $('get-email-preview').item.json.subject }) }}",
+        "options": {}
+      },
+      "id": "b1000011-cafe-babe-dead-beef00000011",
+      "name": "mark-contacted",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2100, 700],
+      "notes": "Updates prospect status → 'contacted' and records email_sent_at + subject_used in the cloud DB."
+    },
+
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "days"
+      },
+      "id": "b1000012-cafe-babe-dead-beef00000012",
+      "name": "wait-3-days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2400, 700],
+      "webhookId": "wait-3-days-resume",
+      "notes": "Pause 3 days before checking if the prospect opened the email. Requires n8n to be running continuously."
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.nrankai.com/prospects/{{ $('prospect-scored').item.json.prospect_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_N8N_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000013-cafe-babe-dead-beef00000013",
+      "name": "check-opened",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2700, 700],
+      "notes": "Fetches current prospect state to check open_count and phone. Needs GET /prospects/{id} endpoint on cloud."
+    },
+
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-no-open",
+              "leftValue": "={{ $json.open_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-has-phone",
+              "leftValue": "={{ $json.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000014-cafe-babe-dead-beef00000014",
+      "name": "should-send-followup",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3000, 700],
+      "notes": "TRUE (index 0): no opens + has phone → SMS followup. FALSE (index 1): opened or no phone → stop."
+    },
+
+    {
+      "parameters": {},
+      "id": "b1000015-cafe-babe-dead-beef00000015",
+      "name": "sms-placeholder",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [3000, 980],
+      "notes": "TODO: Replace with Twilio SMS node when implemented. Prospect has phone and hasn't opened the email after 3 days."
+    }
+
+  ],
+
+  "connections": {
+    "receive-outscraper": {
+      "main": [
+        [{ "node": "filter-eligible", "type": "main", "index": 0 }]
+      ]
+    },
+    "filter-eligible": {
+      "main": [
+        [{ "node": "build-bulk-payload", "type": "main", "index": 0 }]
+      ]
+    },
+    "build-bulk-payload": {
+      "main": [
+        [{ "node": "send-to-cloud", "type": "main", "index": 0 }]
+      ]
+    },
+    "prospect-scored": {
+      "main": [
+        [{ "node": "check-skip", "type": "main", "index": 0 }]
+      ]
+    },
+    "check-skip": {
+      "main": [
+        [{ "node": "check-unsubscribe", "type": "main", "index": 0 }]
+      ]
+    },
+    "check-unsubscribe": {
+      "main": [
+        [{ "node": "is-unsubscribed", "type": "main", "index": 0 }]
+      ]
+    },
+    "is-unsubscribed": {
+      "main": [
+        [],
+        [{ "node": "get-email-preview", "type": "main", "index": 0 }]
+      ]
+    },
+    "get-email-preview": {
+      "main": [
+        [{ "node": "send-outreach", "type": "main", "index": 0 }]
+      ]
+    },
+    "send-outreach": {
+      "main": [
+        [{ "node": "mark-contacted", "type": "main", "index": 0 }]
+      ]
+    },
+    "mark-contacted": {
+      "main": [
+        [{ "node": "wait-3-days", "type": "main", "index": 0 }]
+      ]
+    },
+    "wait-3-days": {
+      "main": [
+        [{ "node": "check-opened", "type": "main", "index": 0 }]
+      ]
+    },
+    "check-opened": {
+      "main": [
+        [{ "node": "should-send-followup", "type": "main", "index": 0 }]
+      ]
+    },
+    "should-send-followup": {
+      "main": [
+        [{ "node": "sms-placeholder", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "prospects" },
+    { "name": "outreach" }
+  ]
+}
