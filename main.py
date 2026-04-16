@@ -184,6 +184,9 @@ app.include_router(unsubscribe_router, tags=["unsubscribe"])
 from routes.webhooks import router as webhooks_router
 app.include_router(webhooks_router, prefix="/webhook", tags=["webhooks"])
 
+from routes.admin import router as admin_router
+app.include_router(admin_router, prefix="/admin", tags=["admin"])
+
 
 # ── Landing page ──────────────────────────────────────────────────────────────
 

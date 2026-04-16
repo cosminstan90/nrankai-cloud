@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nrankai admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    [x-cloak] { display: none !important; }
+    @keyframes toast-in {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    .toast-enter { animation: toast-in 0.25s ease forwards; }
+    .funnel-bar { transition: width 0.6s ease; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-300 min-h-screen" x-data="adminDash()" x-init="init()">
+
+<!-- Toast container -->
+<div class="fixed top-4 right-4 z-50 flex flex-col gap-2" style="min-width:260px">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast-enter rounded-lg px-4 py-3 text-sm font-medium shadow-lg"
+         :class="t.type === 'error' ? 'bg-red-900 text-red-200' : 'bg-emerald-900 text-emerald-200'"
+         x-text="t.msg"></div>
+  </template>
+</div>
+
+<!-- Loading overlay -->
+<div x-cloak x-show="loading" class="fixed inset-0 bg-slate-950/80 flex items-center justify-center z-40">
+  <div class="text-indigo-400 text-lg font-semibold animate-pulse">Loading dashboard…</div>
+</div>
+
+<!-- Error state -->
+<div x-cloak x-show="error && !loading" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-40">
+  <div class="text-center">
+    <p class="text-red-400 text-lg font-semibold mb-2">Failed to load stats</p>
+    <p class="text-slate-500 text-sm mb-4" x-text="error"></p>
+    <button @click="load()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg">Retry</button>
+  </div>
+</div>
+
+<div x-cloak x-show="stats" class="max-w-7xl mx-auto px-4 py-8 space-y-10">
+
+  <!-- HEADER -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-indigo-400 tracking-tight">nrankai admin</h1>
+      <p class="text-slate-500 text-sm mt-0.5" x-text="'Last updated: ' + lastUpdated"></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-slate-600">auto-refresh in <span x-text="countdown"></span>s</span>
+      <button @click="load()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700">
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <template x-for="kpi in kpis" :key="kpi.label">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1" x-text="kpi.label"></p>
+        <p class="text-3xl font-bold text-white" x-text="kpi.value"></p>
+        <p class="text-xs mt-1" :class="kpi.trend >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="kpi.sub"></p>
+      </div>
+    </template>
+  </div>
+
+  <!-- EMAIL FUNNEL -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-5">Email Funnel</h2>
+    <div class="space-y-3">
+      <template x-for="step in funnelSteps" :key="step.label">
+        <div class="flex items-center gap-4">
+          <span class="text-slate-400 text-sm w-24 shrink-0" x-text="step.label"></span>
+          <div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden">
+            <div class="funnel-bar h-full rounded-full flex items-center justify-end pr-2"
+                 :class="step.color"
+                 :style="'width:' + step.pct + '%'">
+              <span class="text-xs font-semibold text-white" x-text="step.pct + '%'" x-show="step.pct > 5"></span>
+            </div>
+          </div>
+          <span class="text-slate-300 text-sm font-medium w-12 text-right" x-text="step.count"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- WARM LEADS QUEUE -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Warm Leads Queue</h2>
+      <span class="text-xs text-indigo-400 font-medium" x-text="warmLeads.length + ' pending'"></span>
+    </div>
+
+    <div x-show="warmLeads.length === 0" class="text-emerald-400 text-sm font-medium py-4 text-center">
+      No warm leads pending
+    </div>
+
+    <div x-show="warmLeads.length > 0" class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+            <th class="text-left pb-2 pr-4">Business</th>
+            <th class="text-left pb-2 pr-4">City</th>
+            <th class="text-left pb-2 pr-4">Segment</th>
+            <th class="text-left pb-2 pr-4">Opens</th>
+            <th class="text-left pb-2 pr-4">Last Opened</th>
+            <th class="text-left pb-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="lead in warmLeads" :key="lead.id">
+            <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+              <td class="py-2.5 pr-4">
+                <div class="font-medium text-slate-200" x-text="lead.business_name"></div>
+                <div class="text-xs text-slate-500" x-text="lead.email_address || '—'"></div>
+              </td>
+              <td class="py-2.5 pr-4 text-slate-400" x-text="[lead.location_city, lead.location_state].filter(Boolean).join(', ') || '—'"></td>
+              <td class="py-2.5 pr-4">
+                <span class="bg-indigo-900/60 text-indigo-300 text-xs px-2 py-0.5 rounded-full" x-text="lead.segment || '—'"></span>
+              </td>
+              <td class="py-2.5 pr-4">
+                <span class="text-amber-400 font-semibold" x-text="lead.open_count"></span>
+              </td>
+              <td class="py-2.5 pr-4 text-slate-500 text-xs" x-text="lead.last_opened_at ? new Date(lead.last_opened_at).toLocaleDateString() : '—'"></td>
+              <td class="py-2.5">
+                <div class="flex gap-2">
+                  <button @click="markStatus(lead.id, 'replied')"
+                          class="text-xs bg-slate-800 hover:bg-indigo-700 text-slate-300 hover:text-white px-2.5 py-1 rounded-md border border-slate-700 hover:border-indigo-600 transition-colors">
+                    Replied
+                  </button>
+                  <button @click="markStatus(lead.id, 'booked')"
+                          class="text-xs bg-emerald-900/50 hover:bg-emerald-700 text-emerald-300 hover:text-white px-2.5 py-1 rounded-md border border-emerald-800 hover:border-emerald-600 transition-colors">
+                    Booked
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STATS GRID (Segment + Industry + Location + Campaign) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- By Segment -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">By Segment</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+            <th class="text-left pb-2 pr-3">Segment</th>
+            <th class="text-right pb-2 pr-3">Count</th>
+            <th class="text-right pb-2 pr-3">Contacted</th>
+            <th class="text-right pb-2 pr-3">Open%</th>
+            <th class="text-right pb-2">Click%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in stats.by_segment" :key="row.segment">
+            <tr class="border-b border-slate-800/40 hover:bg-slate-800/20">
+              <td class="py-2 pr-3 text-slate-200 font-medium" x-text="row.segment"></td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.count"></td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.contacted"></td>
+              <td class="py-2 pr-3 text-right" :class="row.open_rate > 20 ? 'text-emerald-400' : 'text-slate-400'" x-text="row.open_rate + '%'"></td>
+              <td class="py-2 text-right" :class="row.click_rate > 5 ? 'text-emerald-400' : 'text-slate-400'" x-text="row.click_rate + '%'"></td>
+            </tr>
+          </template>
+          <tr x-show="!stats.by_segment || stats.by_segment.length === 0">
+            <td colspan="5" class="py-4 text-center text-slate-600 text-xs">No data yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- By Industry -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">By Industry (top 10)</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+            <th class="text-left pb-2 pr-3">Industry</th>
+            <th class="text-right pb-2 pr-3">Count</th>
+            <th class="text-right pb-2 pr-3">Open%</th>
+            <th class="text-right pb-2">Avg Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(row, i) in (stats.by_industry || []).slice(0,10)" :key="row.business_category">
+            <tr class="border-b border-slate-800/40 hover:bg-slate-800/20">
+              <td class="py-2 pr-3 text-slate-200" x-text="row.business_category"></td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.count"></td>
+              <td class="py-2 pr-3 text-right" :class="row.open_rate > 20 ? 'text-emerald-400' : 'text-slate-400'" x-text="row.open_rate + '%'"></td>
+              <td class="py-2 text-right text-slate-400" x-text="row.avg_opportunity_score"></td>
+            </tr>
+          </template>
+          <tr x-show="!stats.by_industry || stats.by_industry.length === 0">
+            <td colspan="4" class="py-4 text-center text-slate-600 text-xs">No data yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- By Location -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">By Location (top 10)</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+            <th class="text-left pb-2 pr-3">City / State</th>
+            <th class="text-right pb-2 pr-3">Count</th>
+            <th class="text-right pb-2 pr-3">Contacted</th>
+            <th class="text-right pb-2">Open%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(row, i) in (stats.by_location || []).slice(0,10)" :key="row.location">
+            <tr class="border-b border-slate-800/40 hover:bg-slate-800/20">
+              <td class="py-2 pr-3 text-slate-200" x-text="row.location"></td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.count"></td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.contacted"></td>
+              <td class="py-2 text-right" :class="row.open_rate > 20 ? 'text-emerald-400' : 'text-slate-400'" x-text="row.open_rate + '%'"></td>
+            </tr>
+          </template>
+          <tr x-show="!stats.by_location || stats.by_location.length === 0">
+            <td colspan="4" class="py-4 text-center text-slate-600 text-xs">No data yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- By Campaign -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Campaigns (last 10)</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+            <th class="text-left pb-2 pr-3">Campaign</th>
+            <th class="text-right pb-2 pr-3">Leads</th>
+            <th class="text-right pb-2 pr-3">Contacted</th>
+            <th class="text-right pb-2">Open%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in (stats.by_campaign || [])" :key="row.campaign_id">
+            <tr class="border-b border-slate-800/40 hover:bg-slate-800/20">
+              <td class="py-2 pr-3">
+                <div class="text-slate-200 font-medium" x-text="row.campaign_id"></div>
+                <div class="text-xs text-slate-600" x-text="row.latest_created ? new Date(row.latest_created).toLocaleDateString() : ''"></div>
+              </td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.count"></td>
+              <td class="py-2 pr-3 text-right text-slate-400" x-text="row.contacted"></td>
+              <td class="py-2 text-right" :class="row.open_rate > 20 ? 'text-emerald-400' : 'text-slate-400'" x-text="row.open_rate + '%'"></td>
+            </tr>
+          </template>
+          <tr x-show="!stats.by_campaign || stats.by_campaign.length === 0">
+            <td colspan="4" class="py-4 text-center text-slate-600 text-xs">No campaigns yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ROI STRIP -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">ROI</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Booked</p>
+        <p class="text-2xl font-bold text-emerald-400" x-text="stats.roi?.total_booked ?? 0"></p>
+      </div>
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Total Revenue</p>
+        <p class="text-2xl font-bold text-emerald-400" x-text="'$' + (stats.roi?.total_revenue ?? 0).toLocaleString()"></p>
+      </div>
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Avg Deal</p>
+        <p class="text-2xl font-bold text-white" x-text="'$' + (stats.roi?.avg_deal_value ?? 0).toLocaleString()"></p>
+      </div>
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Conversion Rate</p>
+        <p class="text-2xl font-bold text-white" x-text="(stats.roi?.conversion_rate ?? 0) + '%'"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE CHART -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-5">Timeline — last 12 weeks</h2>
+    <canvas id="timelineChart" height="80"></canvas>
+  </div>
+
+  <!-- UNSUBSCRIBES -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Unsubscribes</h2>
+    <div class="flex gap-8">
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Total</p>
+        <p class="text-2xl font-bold text-white" x-text="stats.unsubscribes?.total ?? 0"></p>
+      </div>
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Last 7 days</p>
+        <p class="text-2xl font-bold" :class="(stats.unsubscribes?.last_7_days ?? 0) > 0 ? 'text-red-400' : 'text-white'" x-text="stats.unsubscribes?.last_7_days ?? 0"></p>
+      </div>
+      <div>
+        <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Last 30 days</p>
+        <p class="text-2xl font-bold" :class="(stats.unsubscribes?.last_30_days ?? 0) > 5 ? 'text-red-400' : 'text-white'" x-text="stats.unsubscribes?.last_30_days ?? 0"></p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main container -->
+
+<script>
+function adminDash() {
+  return {
+    loading: true,
+    error: null,
+    stats: null,
+    warmLeads: [],
+    lastUpdated: '',
+    countdown: 300,
+    toasts: [],
+    kpis: [],
+    funnelSteps: [],
+    _chart: null,
+    _countdownTimer: null,
+
+    async init() {
+      await this.load();
+      this._startCountdown();
+    },
+
+    async load() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const [statsRes, warmRes] = await Promise.all([
+          fetch('/admin/stats', { credentials: 'include' }),
+          fetch('/admin/warm-leads', { credentials: 'include' }),
+        ]);
+        if (!statsRes.ok) throw new Error(`Stats: ${statsRes.status} ${statsRes.statusText}`);
+        if (!warmRes.ok) throw new Error(`Warm leads: ${warmRes.status} ${warmRes.statusText}`);
+
+        this.stats = await statsRes.json();
+        this.warmLeads = await warmRes.json();
+        this.lastUpdated = new Date().toLocaleTimeString();
+        this._buildKpis();
+        this._buildFunnel();
+        this.$nextTick(() => this._buildChart());
+        this.countdown = 300;
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    _startCountdown() {
+      if (this._countdownTimer) clearInterval(this._countdownTimer);
+      this._countdownTimer = setInterval(() => {
+        this.countdown--;
+        if (this.countdown <= 0) {
+          this.load();
+          this.countdown = 300;
+        }
+      }, 1000);
+    },
+
+    _buildKpis() {
+      const ov = this.stats.pipeline_overview || {};
+      const ef = this.stats.email_funnel || {};
+      const roi = this.stats.roi || {};
+      this.kpis = [
+        { label: 'Total Prospects', value: ov.total_prospects ?? 0, sub: '', trend: 0 },
+        { label: 'Emails Sent', value: ef.sent ?? 0, sub: '', trend: 0 },
+        { label: 'Open Rate', value: (ef.open_rate ?? 0) + '%', sub: ef.opened + ' opened', trend: ef.open_rate ?? 0 },
+        { label: 'Click Rate', value: (ef.click_rate ?? 0) + '%', sub: ef.clicked + ' clicked', trend: ef.click_rate ?? 0 },
+        { label: 'Booked', value: roi.total_booked ?? 0, sub: roi.total_revenue > 0 ? '$' + (roi.total_revenue ?? 0).toLocaleString() : 'No revenue yet', trend: roi.total_booked ?? 0 },
+      ];
+    },
+
+    _buildFunnel() {
+      const ov = this.stats.pipeline_overview?.breakdown || {};
+      const ef = this.stats.email_funnel || {};
+      const total = this.stats.pipeline_overview?.total_prospects || 1;
+      const steps = [
+        { label: 'Prospects', count: total, color: 'bg-slate-600' },
+        { label: 'Scored', count: (ov.scored || 0) + (ov.contacted || 0) + (ov.replied || 0) + (ov.booked || 0), color: 'bg-indigo-700' },
+        { label: 'Contacted', count: ef.sent || 0, color: 'bg-indigo-500' },
+        { label: 'Opened', count: ef.opened || 0, color: 'bg-violet-500' },
+        { label: 'Clicked', count: ef.clicked || 0, color: 'bg-amber-500' },
+        { label: 'Replied', count: ov.replied || 0, color: 'bg-orange-500' },
+        { label: 'Booked', count: ov.booked || 0, color: 'bg-emerald-500' },
+      ];
+      const maxCount = steps[0].count || 1;
+      this.funnelSteps = steps.map(s => ({
+        ...s,
+        pct: Math.round(s.count / maxCount * 100),
+      }));
+    },
+
+    _buildChart() {
+      const timeline = this.stats.timeline || [];
+      const ctx = document.getElementById('timelineChart');
+      if (!ctx) return;
+      if (this._chart) this._chart.destroy();
+      this._chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: timeline.map(t => t.week),
+          datasets: [
+            {
+              label: 'Prospects Added',
+              data: timeline.map(t => t.prospects_added),
+              backgroundColor: 'rgba(99,102,241,0.7)',
+              borderRadius: 4,
+            },
+            {
+              label: 'Emails Sent',
+              data: timeline.map(t => t.emails_sent),
+              backgroundColor: 'rgba(52,211,153,0.7)',
+              borderRadius: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { size: 12 } },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: '#64748b', font: { size: 11 } },
+              grid: { color: 'rgba(148,163,184,0.08)' },
+            },
+            y: {
+              ticks: { color: '#64748b', font: { size: 11 } },
+              grid: { color: 'rgba(148,163,184,0.08)' },
+            },
+          },
+        },
+      });
+    },
+
+    async markStatus(id, status) {
+      try {
+        const res = await fetch(`/admin/prospects/${id}/mark-status`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || res.statusText);
+        }
+        this.warmLeads = this.warmLeads.filter(l => l.id !== id);
+        this.toast(`Marked as ${status}`, 'success');
+        setTimeout(() => this.load(), 1000);
+      } catch (e) {
+        this.toast('Error: ' + e.message, 'error');
+      }
+    },
+
+    toast(msg, type = 'success') {
+      const id = Date.now();
+      this.toasts.push({ id, msg, type });
+      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3500);
+    },
+  };
+}
+</script>
+
+
+</body>
+</html>

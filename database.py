@@ -135,6 +135,10 @@ class Prospect(Base):
     click_count: Mapped[int] = mapped_column(Integer, default=0)
     first_opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    replied_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    booked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    deal_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

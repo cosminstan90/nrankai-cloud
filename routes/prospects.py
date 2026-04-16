@@ -412,7 +412,51 @@ async def get_prospect(
     return _prospect_to_dict(prospect)
 
 
-# ── 9. GET /prospects/dashboard ───────────────────────────────────────────────
+# ── 9. POST /prospects/{id}/mark-status ──────────────────────────────────────
+
+@router.post("/{prospect_id}/mark-status")
+async def mark_status(
+    prospect_id: int,
+    body: dict,
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_n8n_key),
+):
+    """Mark a prospect as replied or booked, optionally recording deal value and notes."""
+    allowed_statuses = {"replied", "booked"}
+    status = body.get("status")
+    if status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status '{status}'. Must be one of: {sorted(allowed_statuses)}",
+        )
+
+    result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
+    prospect = result.scalar_one_or_none()
+    if prospect is None:
+        raise HTTPException(status_code=404, detail=f"Prospect '{prospect_id}' not found")
+
+    now = datetime.now(timezone.utc)
+    prospect.status = status
+    prospect.updated_at = now
+
+    if status == "replied":
+        prospect.replied_at = now
+    elif status == "booked":
+        prospect.booked_at = now
+
+    deal_value = body.get("deal_value")
+    if deal_value is not None:
+        prospect.deal_value = float(deal_value)
+
+    notes = body.get("notes")
+    if notes is not None:
+        prospect.notes = str(notes)[:1000]
+
+    await db.commit()
+    return {"ok": True, "prospect_id": prospect_id, "status": status}
+
+
+# ── 10. GET /prospects/dashboard ──────────────────────────────────────────────
 
 @router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
 async def prospects_dashboard(request: Request):
