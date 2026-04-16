@@ -32,29 +32,30 @@
 
 <!-- Login overlay -->
 <div x-cloak x-show="!loggedIn" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-50">
-  <form @submit.prevent="login()" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
     <h1 class="text-xl font-bold text-indigo-400 mb-6 tracking-tight">nrankai admin</h1>
     <div class="space-y-4">
       <div>
         <label class="block text-xs text-slate-500 mb-1">Username</label>
         <input x-model="loginUser" type="text" autocomplete="username"
+               @keydown.enter="login()"
                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-               placeholder="admin" required />
+               placeholder="admin" />
       </div>
       <div>
         <label class="block text-xs text-slate-500 mb-1">Password</label>
         <input x-model="loginPass" type="password" autocomplete="current-password"
+               @keydown.enter="login()"
                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-               placeholder="••••••••" required />
+               placeholder="••••••••" />
       </div>
       <p x-show="loginError" x-text="loginError" class="text-red-400 text-xs"></p>
-      <button type="submit" :disabled="loginLoading"
+      <button type="button" @click="login()" :disabled="loginLoading"
               class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold py-2 rounded-lg">
-        <span x-show="!loginLoading">Sign in</span>
-        <span x-show="loginLoading">Signing in…</span>
+        <span x-text="loginLoading ? 'Signing in…' : 'Sign in'"></span>
       </button>
     </div>
-  </form>
+  </div>
 </div>
 
 <!-- Loading overlay -->
