@@ -299,6 +299,8 @@ async def warm_leads(
             "status": p.status,
             "open_count": p.open_count,
             "click_count": p.click_count,
+            "email_sent_at": p.email_sent_at.isoformat() if p.email_sent_at else None,
+            "subject_used": p.subject_used,
             "last_opened_at": p.last_opened_at.isoformat() if p.last_opened_at else None,
             "email_address": p.email_address,
             "phone": p.phone,

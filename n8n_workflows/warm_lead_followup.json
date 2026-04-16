@@ -1,0 +1,148 @@
+{
+  "name": "nrankai - Warm Lead Follow-up",
+  "nodes": [
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "f0000001-cafe-babe-dead-beef00000001",
+      "name": "schedule-10am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "notes": "Runs every day at 10:00. Sends follow-ups to warm leads in the 4–12 day window."
+    },
+
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.nrankai.com/admin/warm-leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic REPLACE_WITH_BASE64_ADMIN_CREDENTIALS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f0000002-cafe-babe-dead-beef00000002",
+      "name": "get-warm-leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "notes": "Returns prospects with open_count > 0, status not in replied/booked/unsubscribed. Array is auto-split by typeVersion 4.2."
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Filter: only leads in the 4–12 day follow-up window.\n// email_sent_at between 4 and 12 days ago = contacted recently but not too long ago.\n// Also: open_count 1–3 (opened but haven't clicked through obsessively).\n// Also: last_opened_at > 1 day ago (not actively reading right now).\n// Also: must have email_address.\n\nconst item = $input.item.json;\n\nif (!item.email_address) return [{ json: { _skip: true } }];\nif (!item.email_sent_at) return [{ json: { _skip: true } }];\n\nconst now = Date.now();\nconst sentAt = new Date(item.email_sent_at).getTime();\nconst daysSinceSent = (now - sentAt) / (1000 * 60 * 60 * 24);\n\nconst lastOpenedAt = item.last_opened_at ? new Date(item.last_opened_at).getTime() : 0;\nconst daysSinceOpen = lastOpenedAt ? (now - lastOpenedAt) / (1000 * 60 * 60 * 24) : 999;\n\n// Follow-up window: sent 4–12 days ago\nif (daysSinceSent < 4 || daysSinceSent > 12) return [{ json: { _skip: true } }];\n\n// Not actively reading right now (opened more than 1 day ago)\nif (daysSinceOpen < 1) return [{ json: { _skip: true } }];\n\n// Not clicking obsessively (if click_count > 0, they're engaged — let them act)\nif (item.click_count > 0) return [{ json: { _skip: true } }];\n\nconst business = item.business_name || 'your business';\nconst city = [item.location_city, item.location_state].filter(Boolean).join(', ');\nconst cityLine = city ? ` in ${city}` : '';\n\nconst subject = `Still thinking it over? — ${business}`;\n\nconst body_html = `<!DOCTYPE html>\n<html>\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"background:#ffffff;color:#1a1a1a;font-family:Arial,sans-serif;margin:0;padding:0;\">\n  <div style=\"max-width:560px;margin:0 auto;padding:32px 24px;\">\n    <p style=\"font-size:15px;line-height:1.6;margin:0 0 16px;\">Hi there,</p>\n    <p style=\"font-size:15px;line-height:1.6;margin:0 0 16px;\">\n      I noticed you had a chance to look at our analysis for <strong>${business}</strong>${cityLine} — just wanted to follow up and see if you had any questions.\n    </p>\n    <p style=\"font-size:15px;line-height:1.6;margin:0 0 16px;\">\n      We identified a few specific improvements that could help <strong>${business}</strong> appear more often in AI search results (ChatGPT, Google AI Overviews, Perplexity). Happy to walk you through them in a quick call.\n    </p>\n    <div style=\"margin:28px 0;\">\n      <a href=\"https://nrankai.com/book\" style=\"background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;display:inline-block;\">Book a 15-min call</a>\n    </div>\n    <p style=\"font-size:13px;color:#666;line-height:1.6;margin:0 0 8px;\">Or just reply to this email — happy to answer any questions directly.</p>\n    <hr style=\"border:none;border-top:1px solid #eee;margin:24px 0;\">\n    <p style=\"font-size:12px;color:#999;margin:0;\">\n      nrankai.com · <a href=\"https://api.nrankai.com/unsubscribe?email=${encodeURIComponent(item.email_address)}\" style=\"color:#999;\">Unsubscribe</a>\n    </p>\n  </div>\n</body>\n</html>`;\n\nreturn [{ json: { ...item, _skip: false, subject, body_html } }];"
+      },
+      "id": "f0000003-cafe-babe-dead-beef00000003",
+      "name": "filter-and-build",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "notes": "Filters leads in the 4–12 day window (email_sent_at), no recent clicks, opened > 1 day ago. Builds follow-up email HTML."
+    },
+
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f0000004-cafe-babe-dead-beef00000004",
+      "name": "should-send",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "notes": "TRUE (index 0) → send follow-up. FALSE (index 1) → skip."
+    },
+
+    {
+      "parameters": {
+        "fromEmail": "hello@nrankai.com",
+        "toEmail": "={{ $json.email_address }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.body_html }}",
+        "options": {}
+      },
+      "id": "f0000005-cafe-babe-dead-beef00000005",
+      "name": "send-followup",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1400, 200],
+      "notes": "IMPORTANT: emailFormat must be 'html' (not emailType). Sends from hello@nrankai.com — use a sending domain alias if available.",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_ZOHO_SMTP_CREDENTIAL_ID",
+          "name": "Zoho nrankai"
+        }
+      }
+    }
+
+  ],
+
+  "connections": {
+    "schedule-10am": {
+      "main": [
+        [{ "node": "get-warm-leads", "type": "main", "index": 0 }]
+      ]
+    },
+    "get-warm-leads": {
+      "main": [
+        [{ "node": "filter-and-build", "type": "main", "index": 0 }]
+      ]
+    },
+    "filter-and-build": {
+      "main": [
+        [{ "node": "should-send", "type": "main", "index": 0 }]
+      ]
+    },
+    "should-send": {
+      "main": [
+        [{ "node": "send-followup", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "outreach" },
+    { "name": "followup" }
+  ]
+}
