@@ -25,10 +25,8 @@ _templates = Jinja2Templates(directory="templates")
 
 @router.get("", response_class=HTMLResponse, include_in_schema=False)
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def admin_dashboard(
-    request: Request,
-    _: None = Depends(require_admin),
-):
+async def admin_dashboard(request: Request):
+    # Auth is handled client-side via JS login form; API endpoints still enforce Basic Auth.
     return _templates.TemplateResponse("admin.html", {"request": request})
 
 

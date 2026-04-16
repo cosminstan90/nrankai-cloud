@@ -30,13 +30,40 @@
   </template>
 </div>
 
+<!-- Login overlay -->
+<div x-cloak x-show="!loggedIn" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-50">
+  <form @submit.prevent="login()" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+    <h1 class="text-xl font-bold text-indigo-400 mb-6 tracking-tight">nrankai admin</h1>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Username</label>
+        <input x-model="loginUser" type="text" autocomplete="username"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+               placeholder="admin" required />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Password</label>
+        <input x-model="loginPass" type="password" autocomplete="current-password"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+               placeholder="••••••••" required />
+      </div>
+      <p x-show="loginError" x-text="loginError" class="text-red-400 text-xs"></p>
+      <button type="submit" :disabled="loginLoading"
+              class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold py-2 rounded-lg">
+        <span x-show="!loginLoading">Sign in</span>
+        <span x-show="loginLoading">Signing in…</span>
+      </button>
+    </div>
+  </form>
+</div>
+
 <!-- Loading overlay -->
-<div x-cloak x-show="loading" class="fixed inset-0 bg-slate-950/80 flex items-center justify-center z-40">
+<div x-cloak x-show="loggedIn && loading" class="fixed inset-0 bg-slate-950/80 flex items-center justify-center z-40">
   <div class="text-indigo-400 text-lg font-semibold animate-pulse">Loading dashboard…</div>
 </div>
 
 <!-- Error state -->
-<div x-cloak x-show="error && !loading" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-40">
+<div x-cloak x-show="loggedIn && error && !loading" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-40">
   <div class="text-center">
     <p class="text-red-400 text-lg font-semibold mb-2">Failed to load stats</p>
     <p class="text-slate-500 text-sm mb-4" x-text="error"></p>
@@ -44,7 +71,7 @@
   </div>
 </div>
 
-<div x-cloak x-show="stats" class="max-w-7xl mx-auto px-4 py-8 space-y-10">
+<div x-cloak x-show="loggedIn && stats" class="max-w-7xl mx-auto px-4 py-8 space-y-10">
 
   <!-- HEADER -->
   <div class="flex items-center justify-between">
@@ -323,7 +350,16 @@
 <script>
 function adminDash() {
   return {
-    loading: true,
+    // auth
+    loggedIn: false,
+    loginUser: '',
+    loginPass: '',
+    loginError: '',
+    loginLoading: false,
+    _authHeader: '',
+
+    // dashboard
+    loading: false,
     error: null,
     stats: null,
     warmLeads: [],
@@ -336,18 +372,70 @@ function adminDash() {
     _countdownTimer: null,
 
     async init() {
-      await this.load();
-      this._startCountdown();
+      // Restore session if available
+      const saved = sessionStorage.getItem('_admin_auth');
+      if (saved) {
+        this._authHeader = saved;
+        this.loggedIn = true;
+        await this.load();
+        this._startCountdown();
+      }
+    },
+
+    async login() {
+      this.loginError = '';
+      this.loginLoading = true;
+      try {
+        const encoded = btoa(this.loginUser + ':' + this.loginPass);
+        const authHeader = 'Basic ' + encoded;
+        const res = await fetch('/admin/stats', {
+          headers: { 'Authorization': authHeader },
+        });
+        if (res.status === 401) {
+          this.loginError = 'Invalid username or password.';
+          return;
+        }
+        if (!res.ok) {
+          this.loginError = `Server error: ${res.status}`;
+          return;
+        }
+        // Credentials valid — store and proceed
+        this._authHeader = authHeader;
+        sessionStorage.setItem('_admin_auth', authHeader);
+        this.loggedIn = true;
+        const statsData = await res.json();
+        const warmRes = await fetch('/admin/warm-leads', {
+          headers: { 'Authorization': this._authHeader },
+        });
+        this.stats = statsData;
+        this.warmLeads = warmRes.ok ? await warmRes.json() : [];
+        this.lastUpdated = new Date().toLocaleTimeString();
+        this._buildKpis();
+        this._buildFunnel();
+        this.$nextTick(() => this._buildChart());
+        this._startCountdown();
+      } catch (e) {
+        this.loginError = 'Network error: ' + e.message;
+      } finally {
+        this.loginLoading = false;
+      }
     },
 
     async load() {
       this.loading = true;
       this.error = null;
       try {
+        const headers = { 'Authorization': this._authHeader };
         const [statsRes, warmRes] = await Promise.all([
-          fetch('/admin/stats', { credentials: 'include' }),
-          fetch('/admin/warm-leads', { credentials: 'include' }),
+          fetch('/admin/stats', { headers }),
+          fetch('/admin/warm-leads', { headers }),
         ]);
+        if (statsRes.status === 401) {
+          // Session expired — back to login
+          this.loggedIn = false;
+          sessionStorage.removeItem('_admin_auth');
+          return;
+        }
         if (!statsRes.ok) throw new Error(`Stats: ${statsRes.status} ${statsRes.statusText}`);
         if (!warmRes.ok) throw new Error(`Warm leads: ${warmRes.status} ${warmRes.statusText}`);
 
@@ -458,8 +546,7 @@ function adminDash() {
       try {
         const res = await fetch(`/admin/prospects/${id}/mark-status`, {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': this._authHeader },
           body: JSON.stringify({ status }),
         });
         if (!res.ok) {
