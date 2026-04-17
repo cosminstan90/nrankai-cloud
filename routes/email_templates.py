@@ -130,6 +130,89 @@ _DEFAULT_TEMPLATES: list[dict] = [
             "Book a call: <a href=\"{{booking_url}}\">{{booking_url}}</a></p>"
         ),
     },
+    # ── Dental outreach sequence (3 emails) ──────────────────────────────────
+    {
+        "segment": "dental_initial",
+        "subject": "{{city}} dentist / ai search",
+        "body_text": (
+            "Dr. {{first_name}},\n\n"
+            "I ran a quick AI search audit on {{practice_name}} — checked how you show up "
+            "when patients ask ChatGPT, Perplexity, and Google's AI Overview "
+            "'dentist in {{city}}.'\n\n"
+            "Short version: {{practice_name}} doesn't appear.\n\n"
+            "Main issues found: {{audit_finding_1}} and {{audit_finding_2}}.\n\n"
+            "I put the findings in a short report — no strings attached. "
+            "Worth sending over?\n\n"
+            "— Cosmin\n"
+            "nrankai.com"
+        ),
+        "body_html": (
+            "<p>Dr. {{first_name}},</p>"
+            "<p>I ran a quick AI search audit on <strong>{{practice_name}}</strong> — checked "
+            "how you show up when patients ask ChatGPT, Perplexity, and Google's AI Overview "
+            "<em>'dentist in {{city}}.'</em></p>"
+            "<p>Short version: <strong>{{practice_name}} doesn't appear.</strong></p>"
+            "<p>Main issues found: {{audit_finding_1}} and {{audit_finding_2}}.</p>"
+            "<p>I put the findings in a short report — no strings attached. "
+            "Worth sending over?</p>"
+            "<p>— Cosmin<br>"
+            "<a href=\"https://nrankai.com\">nrankai.com</a></p>"
+        ),
+    },
+    {
+        "segment": "dental_followup_1",
+        "subject": "re: {{practice_name}}",
+        "body_text": (
+            "Dr. {{first_name}},\n\n"
+            "Sent a note last week about {{practice_name}}'s visibility in AI search. "
+            "Wanted to follow up with one specific data point:\n\n"
+            "When a patient in {{city}} asks ChatGPT 'best dentist near me,' the practices "
+            "that show up share one thing in common — their sites are structured so AI can "
+            "read and cite them. Most dental sites aren't set up this way yet.\n\n"
+            "The audit I ran on {{practice_name}} flagged exactly this. "
+            "Happy to send it over if useful — takes 30 seconds to read.\n\n"
+            "— Cosmin\n"
+            "nrankai.com"
+        ),
+        "body_html": (
+            "<p>Dr. {{first_name}},</p>"
+            "<p>Sent a note last week about <strong>{{practice_name}}</strong>'s visibility "
+            "in AI search. Wanted to follow up with one specific data point:</p>"
+            "<p>When a patient in {{city}} asks ChatGPT <em>'best dentist near me,'</em> "
+            "the practices that show up share one thing in common — their sites are structured "
+            "so AI can read and cite them. Most dental sites aren't set up this way yet.</p>"
+            "<p>The audit I ran on {{practice_name}} flagged exactly this. "
+            "Happy to send it over if useful — takes 30 seconds to read.</p>"
+            "<p>— Cosmin<br>"
+            "<a href=\"https://nrankai.com\">nrankai.com</a></p>"
+        ),
+    },
+    {
+        "segment": "dental_followup_2",
+        "subject": "closing the loop",
+        "body_text": (
+            "Dr. {{first_name}},\n\n"
+            "Last one — I'll get out of your inbox after this.\n\n"
+            "AI search is still early for dental practices, which means the window to get "
+            "ahead of it is now, not in two years when everyone's doing it.\n\n"
+            "If {{practice_name}}'s AI visibility ever becomes a priority, the audit report "
+            "is waiting at nrankai.com — or just reply here.\n\n"
+            "Best of luck,\n"
+            "Cosmin\n"
+            "nrankai.com"
+        ),
+        "body_html": (
+            "<p>Dr. {{first_name}},</p>"
+            "<p>Last one — I'll get out of your inbox after this.</p>"
+            "<p>AI search is still early for dental practices, which means the window to get "
+            "ahead of it is now, not in two years when everyone's doing it.</p>"
+            "<p>If <strong>{{practice_name}}</strong>'s AI visibility ever becomes a priority, "
+            "the audit report is waiting at "
+            "<a href=\"https://nrankai.com\">nrankai.com</a> — or just reply here.</p>"
+            "<p>Best of luck,<br>Cosmin<br>"
+            "<a href=\"https://nrankai.com\">nrankai.com</a></p>"
+        ),
+    },
     {
         "segment": "low_rating",
         "subject": "One system that could improve {{business_name}}'s online reputation",
@@ -224,7 +307,7 @@ async def seed_templates(
     db: AsyncSession = Depends(get_session),
     _: None = Depends(require_n8n_key),
 ):
-    """Insereaza cele 5 template-uri default. Skip daca segmentul exista deja."""
+    """Insereaza template-urile default (segmente generice + secventa dental). Skip daca segmentul exista deja."""
     inserted = 0
     skipped = 0
 

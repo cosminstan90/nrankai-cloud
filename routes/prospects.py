@@ -244,15 +244,30 @@ async def email_preview(
     competitors = prospect.competitors_found or []
     top_issues = prospect.top_issues or []
 
+    # Extract first name from notes field (format: "Job Title | First Last")
+    def _extract_first_name(notes: str | None) -> str:
+        if not notes:
+            return "there"
+        parts = notes.split(" | ", 1)
+        name_part = parts[-1].strip()          # "Laurent Forcioli, Dds"
+        first = name_part.split()[0] if name_part else ""
+        # Strip trailing comma/period and credentials
+        first = first.rstrip(".,").strip()
+        return first or "there"
+
     replacements = {
+        "{{first_name}}":       _extract_first_name(prospect.notes),
         "{{business_name}}":    prospect.business_name or "",
+        "{{practice_name}}":    prospect.business_name or "",
         "{{city}}":             prospect.location_city or "",
         "{{business_category}}": prospect.business_category or "",
         "{{competitor_1}}":     _safe_list_get(competitors, 0, "a competitor"),
         "{{competitor_2}}":     _safe_list_get(competitors, 1, "another competitor"),
         "{{gap_report_text}}":  prospect.gap_report_text or "",
-        "{{top_issue_1}}":      _safe_list_get(top_issues, 0, "technical issues"),
+        "{{top_issue_1}}":      _safe_list_get(top_issues, 0, "not appearing in AI search results"),
         "{{top_issue_2}}":      _safe_list_get(top_issues, 1, "missing structured data"),
+        "{{audit_finding_1}}":  _safe_list_get(top_issues, 0, "not appearing in AI search results"),
+        "{{audit_finding_2}}":  _safe_list_get(top_issues, 1, "missing structured data"),
         "{{google_rating}}":    str(prospect.google_rating) if prospect.google_rating is not None else "your current rating",
         "{{booking_url}}":      os.environ.get("BOOKING_URL", "https://nrankai.com"),
     }
