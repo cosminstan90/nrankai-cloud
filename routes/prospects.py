@@ -219,10 +219,17 @@ def _safe_list_get(lst: list | None, index: int, default: str) -> str:
 @router.get("/{prospect_id}/email-preview")
 async def email_preview(
     prospect_id: int,
+    step: str = Query(default="initial", description="Sequence step: initial | followup_1 | followup_2"),
     db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_worker_key),
+    _: None = Depends(require_n8n_key),
 ):
-    """Returneaza template-ul de email cu placeholder-ele completate pentru prospect."""
+    """Returneaza template-ul de email cu placeholder-ele completate pentru prospect.
+
+    step param selects which template in a multi-email sequence:
+      - initial     → {segment}_initial  (falls back to {segment})
+      - followup_1  → {segment}_followup_1
+      - followup_2  → {segment}_followup_2
+    """
     import os
 
     result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
@@ -232,14 +239,27 @@ async def email_preview(
 
     segment = prospect.segment or "general"
 
-    tpl_result = await db.execute(
-        select(EmailTemplate).where(EmailTemplate.segment == segment)
-    )
-    template = tpl_result.scalar_one_or_none()
+    # Build candidate template names in preference order
+    _STEP_MAP = {
+        "initial":    [f"{segment}_initial", segment],
+        "followup_1": [f"{segment}_followup_1"],
+        "followup_2": [f"{segment}_followup_2"],
+    }
+    candidates = _STEP_MAP.get(step, [f"{segment}_{step}", segment])
+
+    template = None
+    for candidate in candidates:
+        tpl_result = await db.execute(
+            select(EmailTemplate).where(EmailTemplate.segment == candidate)
+        )
+        template = tpl_result.scalar_one_or_none()
+        if template:
+            break
+
     if template is None:
         raise HTTPException(
             status_code=404,
-            detail=f"No email template found for segment '{segment}'. Run POST /email-templates/seed first.",
+            detail=f"No email template found for segment='{segment}' step='{step}'. Tried: {candidates}",
         )
 
     # ── Placeholder values ────────────────────────────────────────────────────
@@ -284,11 +304,15 @@ async def email_preview(
         body_text = body_text.replace(placeholder, value)
 
     return {
-        "prospect_id": prospect_id,
-        "segment":     segment,
-        "subject":     subject,
-        "body_html":   body_html,
-        "body_text":   body_text,
+        "prospect_id":      prospect_id,
+        "segment":          segment,
+        "step":             step,
+        "template_segment": template.segment,
+        "to_email":         prospect.email_address,
+        "to_name":          prospect.business_name,
+        "subject":          subject,
+        "body_html":        body_html,
+        "body_text":        body_text,
     }
 
 
