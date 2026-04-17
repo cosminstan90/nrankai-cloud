@@ -209,6 +209,39 @@ async def list_prospects(
 
 # ── 4. GET /prospects/{id}/email-preview ─────────────────────────────────────
 
+def _ai_visibility_placeholders(ai_queries: list | None) -> dict:
+    """Build {{ai_query}}, {{ai_result}}, {{ai_cited_instead}} from ai_queries_run."""
+    if not ai_queries:
+        return {
+            "{{ai_query}}":         "your practice",
+            "{{ai_result}}":        "doesn't appear in AI search results",
+            "{{ai_cited_instead}}": "your competitors",
+        }
+    # Pick first query that returned a definitive result (appears=False preferred)
+    not_found = [q for q in ai_queries if q.get("appears") is False]
+    chosen = not_found[0] if not_found else ai_queries[0]
+
+    query   = chosen.get("query", "your practice")
+    appears = chosen.get("appears")
+    cited   = chosen.get("cited_instead", [])
+
+    if appears is False:
+        result = "doesn't appear"
+        cited_str = " and ".join(cited[:2]) if cited else "your competitors"
+    elif appears is True:
+        result = "appears"
+        cited_str = ""
+    else:
+        result = "has limited visibility"
+        cited_str = " and ".join(cited[:2]) if cited else "other local practices"
+
+    return {
+        "{{ai_query}}":         query,
+        "{{ai_result}}":        result,
+        "{{ai_cited_instead}}": cited_str,
+    }
+
+
 def _safe_list_get(lst: list | None, index: int, default: str) -> str:
     """Extrage element din lista in mod sigur, cu fallback."""
     if lst and isinstance(lst, list) and len(lst) > index:
@@ -292,6 +325,7 @@ async def email_preview(
         "{{audit_finding_2}}":  _safe_list_get(top_issues, 1, "missing structured data"),
         "{{google_rating}}":    str(prospect.google_rating) if prospect.google_rating is not None else "your current rating",
         "{{booking_url}}":      os.environ.get("BOOKING_URL", "https://nrankai.com"),
+        **_ai_visibility_placeholders(prospect.ai_queries_run),
     }
 
     subject   = template.subject   or ""
@@ -592,6 +626,8 @@ async def save_audit_data(
         prospect.geo_visibility_score = int(body["geo_score"])
     if "gap_report_text" in body:
         prospect.gap_report_text = str(body["gap_report_text"])[:2000]
+    if "ai_queries_run" in body:
+        prospect.ai_queries_run = body["ai_queries_run"]
     if "status" in body:
         prospect.status = body["status"]
 
