@@ -514,7 +514,7 @@ async def retry_callback(
 async def next_pending_audit(
     segment: str = Query(default="dental"),
     db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_worker_key),
+    _: None = Depends(require_n8n_key),
 ):
     """Return next prospect with a URL that hasn't been audited yet.
     Returns 204 when no pending prospects remain."""
@@ -550,7 +550,7 @@ async def save_audit_data(
     prospect_id: int,
     body: dict,
     db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_worker_key),
+    _: None = Depends(require_n8n_key),
 ):
     """Store GEO audit results on a prospect (top_issues, geo_visibility_score, etc.)."""
     result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
