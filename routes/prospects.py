@@ -15,7 +15,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+import hashlib
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -290,7 +292,107 @@ async def email_preview(
     }
 
 
-# ── 5. POST /prospects/{id}/mark-contacted ────────────────────────────────────
+# ── 5. POST /prospects/import-csv ────────────────────────────────────────────
+
+def _synthetic_place_id(email: str) -> str:
+    return "linkedin_" + hashlib.md5(email.lower().encode()).hexdigest()
+
+
+def _clean(val: str | None) -> str:
+    return val.strip() if val else ""
+
+
+@router.post("/import-csv")
+async def import_csv(
+    file: UploadFile = File(...),
+    campaign_id: str = Query(default="dental_2026-04"),
+    segment: str = Query(default="dental"),
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_n8n_key),
+):
+    """Import LinkedIn/Vibe Prospecting CSV export directly into prospects table."""
+    content = await file.read()
+    text = content.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text))
+
+    accepted = 0
+    duplicates = 0
+    skipped = 0
+    now = datetime.now(timezone.utc)
+
+    for row in reader:
+        email = _clean(
+            row.get("contact_professions_email") or
+            row.get("contact_professions_email_address") or
+            row.get("email_address") or ""
+        )
+        if not email or "@" not in email:
+            skipped += 1
+            continue
+
+        if _clean(row.get("contact_professional_email_status", "")) == "invalid":
+            skipped += 1
+            continue
+
+        business_name = _clean(
+            row.get("prospect_company_name") or
+            row.get("business_name") or ""
+        )
+        if not business_name:
+            skipped += 1
+            continue
+
+        url = _clean(
+            row.get("prospect_company_website") or
+            row.get("business_domain") or ""
+        )
+        if url and not url.startswith("http"):
+            url = "https://" + url
+
+        first = _clean(row.get("prospect_first_name", ""))
+        last = _clean(row.get("prospect_last_name", ""))
+        full_name = f"{first} {last}".strip() or _clean(row.get("prospect_full_name", ""))
+        city = _clean(row.get("prospect_city", ""))
+        state = _clean(row.get("prospect_region_name", ""))
+        job_title = _clean(row.get("prospect_job_title", ""))
+
+        prospect = Prospect(
+            campaign_id=campaign_id,
+            url=url or None,
+            business_name=business_name,
+            business_category="Dental Practice",
+            location_city=city or None,
+            location_state=state or None,
+            google_place_id=_synthetic_place_id(email),
+            email_address=email,
+            has_website=bool(url),
+            segment=segment,
+            status="pending",
+            opportunity_score=0,
+            created_at=now,
+            updated_at=now,
+            notes=f"{job_title} | {full_name}" if job_title else full_name,
+        )
+        db.add(prospect)
+        try:
+            await db.flush()
+            accepted += 1
+        except IntegrityError:
+            await db.rollback()
+            duplicates += 1
+
+    await db.commit()
+    return {
+        "ok": True,
+        "accepted": accepted,
+        "duplicates": duplicates,
+        "skipped": skipped,
+        "campaign_id": campaign_id,
+        "segment": segment,
+    }
+
+
+# ── 7. POST /prospects/{id}/mark-contacted ────────────────────────────────────
 
 @router.post("/{prospect_id}/mark-contacted")
 async def mark_contacted(
