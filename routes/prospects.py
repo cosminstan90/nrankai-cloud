@@ -508,8 +508,76 @@ async def retry_callback(
     return {"status": "retry_queued", "prospect_id": prospect_id}
 
 
-# ── 8. GET /prospects/{id} ────────────────────────────────────────────────────
-# NOTE: must be declared BEFORE /dashboard to avoid routing conflict.
+# ── 8. GET /prospects/next-pending-audit ─────────────────────────────────────
+
+@router.get("/next-pending-audit")
+async def next_pending_audit(
+    segment: str = Query(default="dental"),
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_worker_key),
+):
+    """Return next prospect with a URL that hasn't been audited yet.
+    Returns 204 when no pending prospects remain."""
+    result = await db.execute(
+        select(Prospect)
+        .where(
+            Prospect.segment == segment,
+            Prospect.url.isnot(None),
+            Prospect.top_issues.is_(None),
+            Prospect.status == "pending",
+        )
+        .order_by(Prospect.id)
+        .limit(1)
+    )
+    prospect = result.scalar_one_or_none()
+    if prospect is None:
+        from fastapi.responses import Response
+        return Response(status_code=204)
+
+    return {
+        "id": prospect.id,
+        "url": prospect.url,
+        "business_name": prospect.business_name,
+        "city": prospect.location_city,
+        "segment": prospect.segment,
+    }
+
+
+# ── 9. PATCH /prospects/{id}/audit-data ──────────────────────────────────────
+
+@router.patch("/{prospect_id}/audit-data")
+async def save_audit_data(
+    prospect_id: int,
+    body: dict,
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_worker_key),
+):
+    """Store GEO audit results on a prospect (top_issues, geo_visibility_score, etc.)."""
+    result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
+    prospect = result.scalar_one_or_none()
+    if prospect is None:
+        raise HTTPException(status_code=404, detail=f"Prospect '{prospect_id}' not found")
+
+    if "top_issues" in body:
+        raw = body["top_issues"]
+        prospect.top_issues = [
+            i["title"] if isinstance(i, dict) else str(i)
+            for i in raw[:5]
+        ]
+    if "geo_score" in body:
+        prospect.geo_visibility_score = int(body["geo_score"])
+    if "gap_report_text" in body:
+        prospect.gap_report_text = str(body["gap_report_text"])[:2000]
+    if "status" in body:
+        prospect.status = body["status"]
+
+    prospect.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"ok": True, "prospect_id": prospect_id}
+
+
+# ── 10. GET /prospects/{id} ───────────────────────────────────────────────────
+# NOTE: must be declared AFTER all literal /path routes to avoid routing conflict.
 
 @router.get("/{prospect_id}")
 async def get_prospect(
@@ -571,75 +639,6 @@ async def mark_status(
 
     await db.commit()
     return {"ok": True, "prospect_id": prospect_id, "status": status}
-
-
-# ── 10. GET /prospects/next-pending-audit ─────────────────────────────────────
-
-@router.get("/next-pending-audit")
-async def next_pending_audit(
-    segment: str = Query(default="dental"),
-    db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_worker_key),
-):
-    """Return next prospect with a URL that hasn't been audited yet.
-    Returns 204 when no pending prospects remain."""
-    result = await db.execute(
-        select(Prospect)
-        .where(
-            Prospect.segment == segment,
-            Prospect.url.isnot(None),
-            Prospect.top_issues.is_(None),
-            Prospect.status == "pending",
-        )
-        .order_by(Prospect.id)
-        .limit(1)
-    )
-    prospect = result.scalar_one_or_none()
-    if prospect is None:
-        from fastapi.responses import Response
-        return Response(status_code=204)
-
-    return {
-        "id": prospect.id,
-        "url": prospect.url,
-        "business_name": prospect.business_name,
-        "city": prospect.location_city,
-        "segment": prospect.segment,
-    }
-
-
-# ── 11. PATCH /prospects/{id}/audit-data ──────────────────────────────────────
-
-@router.patch("/{prospect_id}/audit-data")
-async def save_audit_data(
-    prospect_id: int,
-    body: dict,
-    db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_worker_key),
-):
-    """Store GEO audit results on a prospect (top_issues, geo_visibility_score, etc.)."""
-    result = await db.execute(select(Prospect).where(Prospect.id == prospect_id))
-    prospect = result.scalar_one_or_none()
-    if prospect is None:
-        raise HTTPException(status_code=404, detail=f"Prospect '{prospect_id}' not found")
-
-    if "top_issues" in body:
-        # Store just the title strings for easy template substitution
-        raw = body["top_issues"]
-        prospect.top_issues = [
-            i["title"] if isinstance(i, dict) else str(i)
-            for i in raw[:5]
-        ]
-    if "geo_score" in body:
-        prospect.geo_visibility_score = int(body["geo_score"])
-    if "gap_report_text" in body:
-        prospect.gap_report_text = str(body["gap_report_text"])[:2000]
-    if "status" in body:
-        prospect.status = body["status"]
-
-    prospect.updated_at = datetime.now(timezone.utc)
-    await db.commit()
-    return {"ok": True, "prospect_id": prospect_id}
 
 
 # ── 12. GET /prospects/dashboard ──────────────────────────────────────────────
