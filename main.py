@@ -195,6 +195,10 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def landing_page(request: Request):
+    # Serve nrankai.com landing page when accessed via main domain
+    host = request.headers.get("host", "")
+    if "nrankai.com" in host and "api." not in host:
+        return templates.TemplateResponse("nrankai_landing.html", {"request": request})
     return templates.TemplateResponse("index.html", {"request": request})
 
 
