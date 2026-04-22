@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>nrankai — AI Visibility for Dental Practices</title>
-  <meta name="description" content="When patients ask ChatGPT for a dentist, does your practice show up? We audit and fix your AI search visibility. Free report for dental practices." />
+  <meta name="description" content="When patients ask ChatGPT for a dentist, does your practice show up? We audit and fix your AI search visibility." />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -75,20 +75,19 @@
       </h1>
 
       <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10">
-        We checked 72 dental practices across the US. <strong class="text-white">Not one appeared</strong> when we searched ChatGPT and Perplexity for "best dentist in [their city]." Their competitors did.
+        Most dental practices are completely invisible to AI search tools like ChatGPT and Perplexity — while their competitors get cited every day. We audit why, and we fix it.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
         <a href="#audit" class="w-full sm:w-auto bg-brand hover:bg-sky-400 text-white font-bold text-lg px-8 py-4 rounded-xl transition-colors shadow-lg shadow-sky-500/20">
-          Get Your Free AI Visibility Report
+          Book a Discovery Call
         </a>
         <a href="#how" class="w-full sm:w-auto text-slate-400 hover:text-white font-medium px-8 py-4 transition-colors">
           See how it works →
         </a>
       </div>
 
-      <!-- Social proof strip -->
-      <p class="mt-8 text-sm text-slate-500">Free for dental practices · No credit card · Report in 24h</p>
+      <p class="mt-8 text-sm text-slate-500">GEO audit · Implementation · Ongoing monitoring</p>
     </div>
   </section>
 
@@ -127,25 +126,25 @@
       <div class="flex flex-col md:flex-row gap-12 items-center">
 
         <div class="flex-1">
-          <div class="text-brand font-semibold text-sm uppercase tracking-wider mb-3">Real data</div>
-          <h2 class="text-3xl md:text-4xl font-bold mb-6">We searched ChatGPT for your city.<br/>Here's what we found.</h2>
-          <p class="text-slate-400 mb-6">We ran "best dentist in [city]" for 72 practices across Milwaukee, Dallas, Chicago, Atlanta and 30+ other cities. The pattern was the same everywhere.</p>
+          <div class="text-brand font-semibold text-sm uppercase tracking-wider mb-3">The reality</div>
+          <h2 class="text-3xl md:text-4xl font-bold mb-6">Your competitors are getting cited.<br/>You're not. Here's why it matters.</h2>
+          <p class="text-slate-400 mb-6">When a patient in your city asks ChatGPT "best dentist near me," AI gives them a short list of 3-5 practices. The practices on that list get calls. The ones that aren't — don't.</p>
           <ul class="space-y-3">
             <li class="flex items-start gap-3">
-              <span class="text-red-400 mt-0.5">✗</span>
-              <span class="text-slate-300">The practice doesn't appear in the AI answer</span>
+              <span class="text-red-400 mt-0.5 font-bold">✗</span>
+              <span class="text-slate-300">Your practice doesn't appear in AI answers</span>
             </li>
             <li class="flex items-start gap-3">
-              <span class="text-red-400 mt-0.5">✗</span>
-              <span class="text-slate-300">2-3 competitors in the same city are cited instead</span>
+              <span class="text-red-400 mt-0.5 font-bold">✗</span>
+              <span class="text-slate-300">Competitors in your city are being recommended instead</span>
             </li>
             <li class="flex items-start gap-3">
-              <span class="text-red-400 mt-0.5">✗</span>
-              <span class="text-slate-300">No llms.txt, AI crawlers not addressed in robots.txt</span>
+              <span class="text-red-400 mt-0.5 font-bold">✗</span>
+              <span class="text-slate-300">Your website isn't structured for AI to read and cite</span>
             </li>
             <li class="flex items-start gap-3">
-              <span class="text-green-400 mt-0.5">✓</span>
-              <span class="text-slate-300">All of this is fixable — usually in under a week</span>
+              <span class="text-green-400 mt-0.5 font-bold">✓</span>
+              <span class="text-slate-300">We know exactly what's missing — and how to fix it</span>
             </li>
           </ul>
         </div>
@@ -277,55 +276,21 @@
     </div>
   </section>
 
-  <!-- CTA / FORM -->
+  <!-- CTA / BOOKING -->
   <section id="audit" class="px-6 py-24 border-t border-white/5">
     <div class="max-w-xl mx-auto text-center">
-      <div class="text-brand font-semibold text-sm uppercase tracking-wider mb-3">Free for dental practices</div>
-      <h2 class="text-3xl md:text-4xl font-bold mb-4">Get your AI Visibility Report</h2>
-      <p class="text-slate-400 mb-10">Enter your practice website below. We'll run a full audit and send you the results within 24 hours — no strings attached.</p>
+      <div class="text-brand font-semibold text-sm uppercase tracking-wider mb-3">Get started</div>
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Find out where you stand</h2>
+      <p class="text-slate-400 mb-10">Book a 15-minute call. We'll walk you through exactly where your practice stands in AI search, which competitors are being cited instead of you, and what it takes to fix it.</p>
 
-      <form
-        id="auditForm"
-        class="space-y-4"
-        onsubmit="submitAudit(event)"
+      <a
+        href="https://cal.com/nrankai"
+        class="inline-block w-full bg-brand hover:bg-sky-400 text-white font-bold text-lg px-8 py-5 rounded-xl transition-colors shadow-lg shadow-sky-500/20 mb-6"
       >
-        <input
-          type="text"
-          id="businessName"
-          placeholder="Practice name (e.g. Milwaukee Family Dentistry)"
-          class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors"
-          required
-        />
-        <input
-          type="url"
-          id="website"
-          placeholder="Website URL (e.g. https://yourdentist.com)"
-          class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors"
-          required
-        />
-        <input
-          type="email"
-          id="email"
-          placeholder="Your email address"
-          class="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors"
-          required
-        />
-        <button
-          type="submit"
-          id="submitBtn"
-          class="w-full bg-brand hover:bg-sky-400 text-white font-bold text-lg px-8 py-4 rounded-xl transition-colors shadow-lg shadow-sky-500/20"
-        >
-          Send Me the Free Report →
-        </button>
-      </form>
+        Book a 15-min Call →
+      </a>
 
-      <div id="successMsg" class="hidden mt-6 bg-green-500/10 border border-green-500/20 rounded-xl p-6">
-        <div class="text-green-400 text-2xl mb-2">✓</div>
-        <p class="text-white font-semibold mb-1">We're on it.</p>
-        <p class="text-slate-400 text-sm">Check your inbox in the next 24 hours for your AI visibility report.</p>
-      </div>
-
-      <p class="mt-6 text-slate-600 text-xs">We won't spam you. One email with your report, that's it.</p>
+      <p class="text-slate-500 text-sm">Or email us directly: <a href="mailto:cosmin.stan@nrankaimail.com" class="text-brand hover:underline">cosmin.stan@nrankaimail.com</a></p>
     </div>
   </section>
 
@@ -338,46 +303,10 @@
       </div>
       <div class="flex items-center gap-6 text-sm text-slate-500">
         <a href="mailto:cosmin.stan@nrankaimail.com" class="hover:text-white transition-colors">cosmin.stan@nrankaimail.com</a>
-        <a href="https://app.nrankai.com" class="hover:text-white transition-colors">App →</a>
       </div>
     </div>
   </footer>
 
-  <script>
-    async function submitAudit(e) {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      btn.textContent = 'Submitting...';
-      btn.disabled = true;
-
-      const payload = {
-        company_name: document.getElementById('businessName').value,
-        website: document.getElementById('website').value,
-        email: document.getElementById('email').value,
-        language: 'en',
-        source: 'landing_page',
-      };
-
-      try {
-        const resp = await fetch('https://api.nrankai.com/api/lead-audits/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (resp.ok) {
-          document.getElementById('auditForm').classList.add('hidden');
-          document.getElementById('successMsg').classList.remove('hidden');
-        } else {
-          throw new Error('Server error');
-        }
-      } catch (err) {
-        btn.textContent = 'Send Me the Free Report →';
-        btn.disabled = false;
-        alert('Something went wrong. Please email us at cosmin.stan@nrankaimail.com');
-      }
-    }
-  </script>
 
 </body>
 </html>
